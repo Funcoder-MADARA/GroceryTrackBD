@@ -14,6 +14,28 @@ import {
 } from 'lucide-react';
 import { ordersAPI, analyticsAPI, notificationsAPI } from '../services/api';
 
+interface PendingUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
+interface Order {
+  _id: string;
+  orderNumber: number | string;
+  finalAmount?: number;
+  status: string;
+}
+
+interface Notification {
+  _id: string;
+  title: string;
+  message: string;
+  createdAt: string;
+}
+
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
@@ -56,7 +78,49 @@ const Dashboard: React.FC = () => {
   );
   const recentOrders = recentOrdersResponse?.data || recentOrdersResponse;
 
-  const getRoleDisplayName = () => {
+  // For admin: fetch pending users (waiting for approval)
+  const {
+    data: pendingResponse,
+    isLoading: adminLoading,
+    refetch: refetchPending,
+  } = useQuery(
+    ['pendingUsers'],
+    () => {
+      const token = localStorage.getItem('token');
+      return fetch('http://localhost:5000/api/auth/pending-users', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      }).then((res) => res.json());
+    },
+    { enabled: user?.role === 'admin' }
+  );
+  const pendingUsers: PendingUser[] = pendingResponse?.pendingUsers || [];
+
+  // Approve a pending user (admin only)
+  const handleApprove = async (userId: string): Promise<void> => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:5000/api/auth/approve-user/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        refetchPending();
+      } else {
+        console.error(data.message || 'Approval failed');
+      }
+    } catch (error) {
+      console.error('Error approving user:', error);
+    }
+  };
+
+  const getRoleDisplayName = (): string => {
     switch (user?.role) {
       case 'shopkeeper':
         return 'Shop Keeper';
@@ -71,7 +135,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const getUserDisplayName = () => {
+  const getUserDisplayName = (): string => {
     if (user?.role === 'shopkeeper' && user?.shopkeeperInfo?.shopName) {
       return user.shopkeeperInfo.shopName;
     }
@@ -81,7 +145,7 @@ const Dashboard: React.FC = () => {
     return user?.name || 'User';
   };
 
-  const getWelcomeMessage = () => {
+  const getWelcomeMessage = (): string => {
     const hour = new Date().getHours();
     let greeting = 'Good morning';
     if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
@@ -287,6 +351,48 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Pending Users Section for Admin */}
+      {user?.role === 'admin' && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Pending User Approvals</h3>
+          {adminLoading ? (
+            <p>Loading pending users...</p>
+          ) : pendingUsers.length === 0 ? (
+            <p>No pending users to approve.</p>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Name</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Email</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Phone</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Role</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {pendingUsers.map((pendingUser: PendingUser) => (
+                  <tr key={pendingUser._id}>
+                    <td className="px-4 py-2 text-sm text-gray-900">{pendingUser.name}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{pendingUser.email}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{pendingUser.phone}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{pendingUser.role}</td>
+                    <td className="px-4 py-2">
+                      <button
+                        onClick={() => handleApprove(pendingUser._id)}
+                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Approve
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
@@ -298,7 +404,7 @@ const Dashboard: React.FC = () => {
             <div className="p-6">
               {recentOrders?.orders?.length > 0 ? (
                 <div className="space-y-4">
-                  {recentOrders.orders.slice(0, 5).map((order: any) => (
+                  {recentOrders.orders.slice(0, 5).map((order: Order) => (
                     <div key={order._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900">#{order.orderNumber}</p>
@@ -327,7 +433,7 @@ const Dashboard: React.FC = () => {
           <div className="p-6">
             {notifications?.notifications?.length > 0 ? (
               <div className="space-y-4">
-                {notifications.notifications.slice(0, 5).map((notification: any) => (
+                {notifications.notifications.slice(0, 5).map((notification: Notification) => (
                   <div key={notification._id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                     <Bell className="h-5 w-5 text-primary-600 mt-0.5" />
                     <div className="flex-1">

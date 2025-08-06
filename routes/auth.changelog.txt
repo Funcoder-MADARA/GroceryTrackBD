@@ -1,0 +1,44 @@
+Temporary Change Log - User Registration Status (auto-approve)
+===============================================================
+
+Date: [Fill in today's date]
+Author: [Your Name]
+
+Summary:
+--------
+Temporarily modified the user registration logic so that all new user accounts are automatically set to 'active' status, bypassing the manual admin approval process. This is for development/testing purposes and should be reverted for production or when manual approval is required again.
+
+Files Modified:
+---------------
+- GroceryTrackBD/routes/auth.js
+
+Details of Change:
+------------------
+- In the POST /register route, the following code block was COMMENTED OUT:
+
+    // For regular users, default to inactive until approved
+    status: 'inactive'
+
+- Instead, the following was ADDED (temporary):
+
+    // TEMP: Automatically set to active for all new users
+    status: 'active'
+
+- The original code is preserved in comments for easy reversion.
+
+How to Revert:
+--------------
+1. Open GroceryTrackBD/routes/auth.js
+2. Find the section marked with:
+   // TEMPORARY CHANGE: Automatically approve all new users by setting status to 'active'.
+3. Uncomment the original userData block that sets status: 'inactive'.
+4. Remove or comment out the temporary userData block that sets status: 'active'.
+5. Save the file.
+
+Why:
+----
+- This change allows all new user registrations to be immediately active, bypassing the admin approval step.
+- Useful for development, testing, or demo purposes.
+- Should be reverted before deploying to production or when you want to require admin approval for new users again.
+
+END OF CHANGELOG

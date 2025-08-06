@@ -46,7 +46,7 @@ const AppRoutes: React.FC = () => {
         <Route path="deliveries/:deliveryId" element={<DeliveryDetails />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="admin/users" element={<Users />} />
+        <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><Users /></ProtectedRoute>} />
       </Route>
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/dashboard" />} />

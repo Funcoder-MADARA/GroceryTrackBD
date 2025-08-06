@@ -96,6 +96,9 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     }
 
     // Create user object based on role
+    // TEMPORARY CHANGE: Automatically approve all new users by setting status to 'active'.
+    // The following block is commented out for now:
+    /*
     const userData = {
       name,
       email,
@@ -107,6 +110,20 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       address,
       // For regular users, default to inactive until approved
       status: 'inactive'
+    };
+    */
+    // Use this instead (temporary):
+    const userData = {
+      name,
+      email,
+      phone,
+      password,
+      role,
+      area,
+      city,
+      address,
+      // TEMP: Automatically set to active for all new users
+      status: 'active'
     };
 
     // Add role-specific information

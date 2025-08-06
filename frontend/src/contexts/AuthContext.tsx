@@ -42,6 +42,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  updateProfileImage: (profileImage: string) => Promise<void>;
 }
 
 interface RegisterData {
@@ -157,6 +158,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Add this function for updating profile image
+  const updateProfileImage = async (profileImage: string) => {
+    try {
+      const response = await api.put(`/profile/${user?._id}/image`, { profileImage });
+      setUser(response.data.user);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -165,6 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     isLoading,
     updateProfile,
+    updateProfileImage, // add to context
   };
 
   return (

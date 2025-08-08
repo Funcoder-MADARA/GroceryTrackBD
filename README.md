@@ -313,3 +313,52 @@ For support and questions, please contact:
 ---
 
 **GroceryTrackBD** - Connecting Bangladesh's grocery ecosystem through technology.
+
+## Order & Profile API (Express + MongoDB)
+
+- Start the server on your student ID last 4 digits by setting `PORT` in `.env`.
+- MongoDB via Docker: `docker compose up -d`.
+
+### Setup
+1. Copy `.env.example` to `.env` and set `PORT` to your student ID last 4 digits.
+2. Start MongoDB: `docker compose up -d`.
+3. Seed sample data: `npm run seed`.
+4. Start server: `npm run dev` or `npm start`.
+
+### Endpoints
+Base URL: `http://localhost:PORT/api/v1`
+
+- GET `/users/:userId` — Get profile.
+- PUT `/users/:userId` — Update profile.
+- POST `/orders` — Place an order.
+- GET `/orders?userId=...` — Order history for a user.
+- POST `/orders/:orderId/reorder` — Duplicate a previous order.
+
+### Example cURL
+
+- Get profile:
+```
+curl -s http://localhost:1234/api/v1/users/<USER_ID>
+```
+
+- Update profile:
+```
+curl -s -X PUT http://localhost:1234/api/v1/users/<USER_ID> \
+  -H 'Content-Type: application/json' \
+  -d '{"fullName":"New Name","shopType":"Large"}'
+```
+
+- Place order:
+```
+curl -s -X POST http://localhost:1234/api/v1/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"userId":"<USER_ID>","companyName":"Jamuna Export Limited","items":[{"productId":"<PRODUCT_ID>","quantity":12}]}'
+```
+
+- Get order history:
+```
+curl -s "http://localhost:1234/api/v1/orders?userId=<USER_ID>"
+```
+
+### Postman
+A Postman collection is available in `docs/Postman_collection.json`. Import it, set the `PORT`, `USER_ID`, and `PRODUCT_ID` variables, send requests, and capture screenshots.

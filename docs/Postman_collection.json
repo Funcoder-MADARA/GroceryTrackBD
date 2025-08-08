@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "Order & Profile API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "a1111111-b222-4ccc-8ddd-eeeee1111111"
+  },
+  "item": [
+    {
+      "name": "Get Profile",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:{{PORT}}/api/v1/users/{{USER_ID}}",
+          "host": ["http://localhost"],
+          "path": ["api", "v1", "users", "{{USER_ID}}"],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Update Profile",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"New Name\",\n  \"shopType\": \"Large\"\n}" },
+        "url": {
+          "raw": "http://localhost:{{PORT}}/api/v1/users/{{USER_ID}}",
+          "host": ["http://localhost"],
+          "path": ["api", "v1", "users", "{{USER_ID}}"]
+        }
+      }
+    },
+    {
+      "name": "Place Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{USER_ID}}\",\n  \"companyName\": \"Jamuna Export Limited\",\n  \"items\": [\n    { \"productId\": \"{{PRODUCT_ID}}\", \"quantity\": 12 }\n  ]\n}" },
+        "url": {
+          "raw": "http://localhost:{{PORT}}/api/v1/orders",
+          "host": ["http://localhost"],
+          "path": ["api", "v1", "orders"]
+        }
+      }
+    },
+    {
+      "name": "Order History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:{{PORT}}/api/v1/orders?userId={{USER_ID}}",
+          "host": ["http://localhost"],
+          "path": ["api", "v1", "orders"],
+          "query": [
+            { "key": "userId", "value": "{{USER_ID}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Reorder",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:{{PORT}}/api/v1/orders/{{ORDER_ID}}/reorder",
+          "host": ["http://localhost"],
+          "path": ["api", "v1", "orders", "{{ORDER_ID}}", "reorder"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "PORT", "value": "1234" },
+    { "key": "USER_ID", "value": "" },
+    { "key": "PRODUCT_ID", "value": "" },
+    { "key": "ORDER_ID", "value": "" }
+  ]
+}

@@ -1,122 +1,246 @@
 const express = require('express');
 const Order = require('../models/Order');
-const Product = require('../models/Product');
+const Product = require('../models/Products');
 const User = require('../models/User');
 const { validateOrderCreation, validateOrderStatusUpdate, validateObjectId, validatePagination } = require('../middleware/validation');
 const { authenticateToken, authorizeShopkeeper, authorizeCompanyRep, authorizeAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Create new order (shopkeeper)
-router.post('/', authenticateToken, authorizeShopkeeper, validateOrderCreation, async (req, res) => {
-  try {
-    const {
-      companyId,
-      items,
-      deliveryArea,
-      deliveryAddress,
-      deliveryCity,
-      paymentMethod,
-      preferredDeliveryDate,
-      deliveryInstructions,
-      notes
-    } = req.body;
+// Get order history
+router.get('/history', authenticateToken, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        
+        // Get status filter
+        const statusFilter = req.query.status ? req.query.status.split(',') : null;
+        
+        // Get date range
+        const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+        const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+        
+        // Build query
+        let query = {};
+        
+        // Add user role specific filters
+        if (req.user.role === 'shopkeeper') {
+            query.shopkeeperId = req.user.id;
+        } else if (req.user.role === 'company_rep') {
+            query.companyId = req.user.id;
+        } else if (req.user.role === 'delivery_worker') {
+            query.deliveryWorkerId = req.user.id;
+        }
+        
+        // Add status filter if provided
+        if (statusFilter) {
+            query.status = { $in: statusFilter };
+        }
+        
+        // Add date range if provided
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = startDate;
+            if (endDate) query.createdAt.$lte = endDate;
+        }
+        
+        // Get orders with pagination
+        const orders = await Order.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('shopkeeperId', 'name shopkeeperInfo.shopName')
+            .populate('companyId', 'name companyInfo.companyName')
+            .populate('deliveryWorkerId', 'name');
 
-    // Verify company exists and is active
-    const company = await User.findById(companyId);
-    if (!company || company.role !== 'company_rep' || company.status !== 'active') {
-      return res.status(400).json({
-        error: 'Invalid company',
-        message: 'Selected company is not available'
-      });
-    }
-
-    // Validate and process items
-    const processedItems = [];
-    let totalAmount = 0;
-
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      
-      if (!product) {
-        return res.status(400).json({
-          error: 'Product not found',
-          message: `Product with ID ${item.productId} not found`
+        // Get total count for pagination
+        const totalOrders = await Order.countDocuments(query);
+        const totalPages = Math.ceil(totalOrders / limit);
+        
+        // Calculate summary
+        const summary = {
+            totalOrders,
+            statusCounts: {},
+            totalAmount: 0
+        };
+        
+        // Process orders and calculate summary
+        const processedOrders = orders.map(order => {
+            summary.totalAmount += order.finalAmount;
+            summary.statusCounts[order.status] = (summary.statusCounts[order.status] || 0) + 1;
+            
+            return {
+                id: order._id,
+                orderNumber: order.orderNumber,
+                companyName: order.companyId?.companyInfo?.companyName || 'N/A',
+                shopName: order.shopkeeperId?.shopkeeperInfo?.shopName || 'N/A',
+                totalAmount: order.finalAmount,
+                status: order.status,
+                createdAt: order.createdAt,
+                deliveredAt: order.deliveredAt,
+                items: order.items.map(item => ({
+                    productName: item.productName,
+                    quantity: item.quantity,
+                    totalPrice: item.totalPrice
+                }))
+            };
         });
-      }
 
-      if (!product.isActive || !product.isAvailable) {
-        return res.status(400).json({
-          error: 'Product not available',
-          message: `Product ${product.name} is not available`
+        res.json({
+            orders: processedOrders,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalOrders,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            },
+            summary
         });
-      }
 
-      if (product.stockQuantity < item.quantity) {
-        return res.status(400).json({
-          error: 'Insufficient stock',
-          message: `Insufficient stock for product ${product.name}`
+    } catch (error) {
+        console.error('Get order history error:', error);
+        res.status(500).json({
+            error: 'Failed to fetch order history',
+            message: 'An error occurred while fetching order history'
         });
-      }
-
-      const itemTotal = product.price * item.quantity;
-      totalAmount += itemTotal;
-
-      processedItems.push({
-        productId: product._id,
-        productName: product.name,
-        quantity: item.quantity,
-        unitPrice: product.price,
-        totalPrice: itemTotal,
-        unit: product.unit
-      });
     }
-
-    // Calculate final amount (add tax and delivery charge)
-    const taxAmount = totalAmount * 0.05; // 5% tax
-    const deliveryCharge = 50; // Fixed delivery charge
-    const finalAmount = totalAmount + taxAmount + deliveryCharge;
-
-    // Create order
-    const order = new Order({
-      shopkeeperId: req.user._id,
-      companyId,
-      items: processedItems,
-      totalAmount,
-      taxAmount,
-      deliveryCharge,
-      finalAmount,
-      deliveryArea,
-      deliveryAddress,
-      deliveryCity,
-      paymentMethod,
-      preferredDeliveryDate,
-      deliveryInstructions,
-      notes
-    });
-
-    await order.save();
-
-    // Update product stock
-    for (const item of processedItems) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { stockQuantity: -item.quantity, totalOrders: 1 }
-      });
-    }
-
-    res.status(201).json({
-      message: 'Order placed successfully',
-      order: order.getOrderSummary()
-    });
-
-  } catch (error) {
-    console.error('Create order error:', error);
-    res.status(500).json({
-      error: 'Order creation failed',
-      message: 'An error occurred while placing order'
-    });
-  }
 });
+
+// Create new order
+router.post(
+  '/',
+  authenticateToken,
+  authorizeShopkeeper,
+  validateOrderCreation,
+  async (req, res) => {
+    try {
+      const {
+        companyId,
+        items,
+        deliveryArea,
+        deliveryAddress,
+        deliveryCity,
+        paymentMethod,
+        preferredDeliveryDate,
+        deliveryInstructions,
+        notes
+      } = req.body;
+
+      // Validate company
+      const company = await User.findById(companyId);
+      if (!company || company.role !== 'company_rep' || company.status !== 'active') {
+        return res.status(400).json({
+          error: 'Invalid company',
+          message: 'Selected company is not available'
+        });
+      }
+
+      // Process items
+      const processedItems = [];
+      let totalAmount = 0;
+
+      for (const item of items) {
+        const product = await Product.findById(item.productId);
+
+        if (!product) {
+          return res.status(400).json({
+            error: 'Product not found',
+            message: `Product with ID ${item.productId} not found`
+          });
+        }
+
+        if (!product.isActive || !product.isAvailable) {
+          return res.status(400).json({
+            error: 'Product not available',
+            message: `Product ${product.name} is not available`
+          });
+        }
+
+        if (product.stockQuantity < item.quantity) {
+          return res.status(400).json({
+            error: 'Insufficient stock',
+            message: `Insufficient stock for product ${product.name}`
+          });
+        }
+
+        const itemTotal = product.price * item.quantity;
+        totalAmount += itemTotal;
+
+        processedItems.push({
+          productId: product._id,
+          productName: product.name,
+          quantity: item.quantity,
+          unitPrice: product.price,
+          totalPrice: itemTotal,
+          unit: product.unit
+        });
+      }
+
+      // Tax, delivery, final
+      const taxAmount = totalAmount * 0.05;
+      const deliveryCharge = 50;
+      const finalAmount = totalAmount + taxAmount + deliveryCharge;
+
+      // Generate order number
+      const latestOrder = await Order.findOne().sort({ createdAt: -1 });
+      let newOrderNumber;
+      if (latestOrder && latestOrder.orderNumber) {
+        const lastNum = parseInt(latestOrder.orderNumber.split('-')[1]);
+        newOrderNumber = `ORD-${lastNum + 1}`;
+      } else {
+        newOrderNumber = 'ORD-1001';
+      }
+
+      // Create order
+      const newOrder = new Order({
+        orderNumber: newOrderNumber,
+        companyId,
+        shopkeeperId: req.user.id,
+        items: processedItems,
+        deliveryArea,
+        deliveryAddress,
+        deliveryCity,
+        paymentMethod,
+        preferredDeliveryDate,
+        deliveryInstructions,
+        notes,
+        taxAmount,
+        deliveryCharge,
+        totalAmount: finalAmount,
+        finalAmount: finalAmount,
+        status: 'pending',
+        createdBy: req.user.id
+      });
+
+      await newOrder.save();
+
+      // Update product stock AFTER saving order
+      for (const item of processedItems) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stockQuantity: -item.quantity, totalOrders: 1 }
+        });
+      }
+
+      // Send success response
+      return res.status(201).json({
+        message: 'Order placed successfully',
+        order: newOrder
+      });
+
+    } catch (error) {
+      console.error('Create order error:', error);
+
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: 'Server error',
+          details: error.message
+        });
+      }
+    }
+  }
+);
 
 // Get orders for shopkeeper
 router.get('/shopkeeper', authenticateToken, authorizeShopkeeper, validatePagination, async (req, res) => {

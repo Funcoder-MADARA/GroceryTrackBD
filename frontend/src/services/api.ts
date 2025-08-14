@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1591/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -48,12 +48,27 @@ export const authAPI = {
   
   getProfile: () =>
     api.get('/auth/me'),
-  
+    
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
   
   forgotPassword: (email: string) =>
     api.post('/auth/forgot-password', { email }),
+};
+
+// Order API
+export const orderAPI = {
+  getOrders: (page = 1, limit = 10, filters?: { status?: string; startDate?: string; endDate?: string }) =>
+    api.get('/orders/history', { params: { page, limit, ...filters } }),
+    
+  getOrderById: (orderId: string) =>
+    api.get(`/orders/${orderId}`),
+    
+  updateOrderStatus: (orderId: string, status: string, notes?: string) =>
+    api.patch(`/orders/${orderId}/status`, { status, notes }),
+    
+  createOrder: (orderData: any) =>
+    api.post('/orders', orderData),
 };
 
 // Profile API
@@ -111,6 +126,15 @@ export const ordersAPI = {
   
   getAllOrders: (params?: any) =>
     api.get('/orders', { params }),
+    
+  getOrderHistory: (params?: any) =>
+    api.get('/orders/history', { params }),
+    
+  getOrderTimeline: (orderId: string) =>
+    api.get(`/orders/${orderId}/timeline`),
+    
+  getCompanyProducts: (companyId: string) =>
+    api.get(`/products/company/${companyId}`),
 };
 
 // Deliveries API

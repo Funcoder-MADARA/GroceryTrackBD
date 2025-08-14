@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 1591;
 
 // Import routes
 const authRoutes = require('./routes/auth');

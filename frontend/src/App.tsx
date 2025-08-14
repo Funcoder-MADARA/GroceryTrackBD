@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Orders from './pages/orders/Orders';
 import OrderDetails from './pages/orders/OrderDetails';
+import CreateOrder from './pages/orders/CreateOrder';
+import OrderHistory from './pages/orders/OrderHistory';
 import Products from './pages/products/Products';
 import ProductDetails from './pages/products/ProductDetails';
 import Deliveries from './pages/delivery/Deliveries';
@@ -39,7 +41,9 @@ const AppRoutes: React.FC = () => {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="profile" element={<Profile />} />
         <Route path="orders" element={<Orders />} />
-        <Route path="orders/:orderId" element={<OrderDetails />} />
+        <Route path="orders/create" element={<CreateOrder />} />
+        <Route path="orders/history" element={<OrderHistory />} />
+        <Route path="orders/:orderNumber" element={<OrderDetails />} />
         <Route path="products" element={<Products />} />
         <Route path="products/:productId" element={<ProductDetails />} />
         <Route path="deliveries" element={<Deliveries />} />

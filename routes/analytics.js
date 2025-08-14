@@ -1,7 +1,7 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Delivery = require('../models/Delivery');
-const Product = require('../models/Product');
+const Product = require('../models/Products');
 const User = require('../models/User');
 const { validatePagination } = require('../middleware/validation');
 const { authenticateToken, authorizeShopkeeper, authorizeCompanyRep, authorizeAdmin } = require('../middleware/auth');

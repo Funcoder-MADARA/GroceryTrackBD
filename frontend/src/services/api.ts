@@ -169,10 +169,41 @@ export const deliveriesAPI = {
 
 // Analytics API
 export const analyticsAPI = {
-  getShopkeeperAnalytics: (params?: any) =>
+  // Company Analytics
+  getCompanyPerformanceSummary: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/summary`, { params }),
+  
+  getCompanyRiskAssessment: (companyId: string) =>
+    api.get(`/analytics/company/${companyId}/risk`),
+  
+  getCompanyWeeklyAnalytics: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/weekly`, { params }),
+  
+  getCompanyQuarterlyAnalytics: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/quarterly`, { params }),
+  
+  getCompanyPerformance: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/performance`, { params }),
+  
+  getCompanyAnalyticsByRange: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/range`, { params }),
+  
+  getCompanyDashboard: (companyId: string) =>
+    api.get(`/analytics/dashboard/${companyId}`),
+  
+  // Product Analytics
+  getProductPerformanceTrends: (productId: string, params?: any) =>
+    api.get(`/analytics/product/${productId}/trends`, { params }),
+  
+  // Shopkeeper Analytics
+  getShopkeeperAnalytics: (shopkeeperId: string, params?: any) =>
+    api.get(`/analytics/shopkeeper/${shopkeeperId}`, { params }),
+  
+  // Legacy endpoints for backward compatibility
+  getShopkeeperAnalyticsLegacy: (params?: any) =>
     api.get('/analytics/shopkeeper', { params }),
   
-  getCompanyAnalytics: (params?: any) =>
+  getCompanyAnalyticsLegacy: (params?: any) =>
     api.get('/analytics/company', { params }),
   
   getAreaAnalytics: (area: string, params?: any) =>
@@ -231,6 +262,19 @@ export const productsAPI = {
   
   deleteProduct: (productId: string) =>
     api.delete(`/products/${productId}`),
+};
+
+// Flags API
+export const flagsAPI = {
+  createFlag: (flagData: FormData) =>
+    api.post('/flags', flagData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+  
+  getMyFlags: () =>
+    api.get('/flags/mine'),
 };
 
 export default api;

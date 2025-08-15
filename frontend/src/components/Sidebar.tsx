@@ -12,7 +12,8 @@ import {
   Building,
   User,
   X,
-  Settings
+  Settings,
+  Flag
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,6 +37,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       href: '/orders',
       icon: ShoppingCart,
       roles: ['shopkeeper', 'company_rep', 'admin']
+    },
+    {
+      name: 'Flags',
+      href: '/flags',
+      icon: Flag,
+      roles: ['shopkeeper']
     },
     {
       name: 'Products',

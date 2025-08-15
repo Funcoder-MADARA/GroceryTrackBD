@@ -303,6 +303,76 @@ For support and questions, please contact:
 - Email: support@grocerytrackbd.com
 - Documentation: [Project Wiki](wiki-url)
 
+## 📋 Changelog
+
+### Changelog for 15th August 2025
+
+#### 🚀 New Features
+- **Flagging System**: Implemented complete flagging feature for shopkeepers to report unpopular products
+- **Searchable Company Dropdown**: Enhanced company selection with integrated search functionality
+- **Dynamic Product Filtering**: Products automatically filter based on selected company
+
+#### 🏗️ Architecture Changes
+- **Dedicated Products Route**: Created `/api/products` endpoint for product management
+- **Separate Database Collections**: Established clear separation between companies and products
+- **File Upload System**: Added PDF receipt upload functionality for flags
+- **Advanced Analytics System**: Implemented comprehensive loss analytics tracking with real-time updates
+
+#### ⚠️ Critical Database Structure Information
+
+**IMPORTANT**: When working with this application, be aware of the following database architecture:
+
+##### **Separate Collections for Companies and Products:**
+
+1. **`Users` Collection**: 
+   - Contains company representatives with `role: 'company_rep'`
+   - Each company user has `companyInfo.companyName`, `name`, and `email` fields
+   - **NOT** the same as products
+
+2. **`Products` Collection**: 
+   - **SEPARATE** collection that stores all products
+   - Each product has a `companyId` field that references the company user
+   - Products are linked to companies through this `companyId` relationship
+   - **NOT** stored within the user document
+
+##### **Key Points:**
+- **Companies ≠ Products** - They are in different collections
+- **Relationship**: `Product.companyId` → `User._id` (where User.role = 'company_rep')
+- **API Endpoints**: 
+  - Companies: `/api/profile/role/company_rep`
+  - Products: `/api/products` (with `companyId` query parameter)
+- **Frontend**: Use `profileAPI.getUsersByRole('company_rep')` for companies and `productsAPI.getProducts({ companyId })` for products
+
+##### **Why This Matters:**
+- The flagging feature depends on this separation
+- Products are dynamically loaded based on selected company
+- Don't assume products are embedded in company documents
+- Always check both collections when working with company-product relationships
+
+This architecture ensures scalability and proper data relationships between companies and their manufactured products.
+
+#### 🔧 Technical Improvements
+- **TypeScript Interface Updates**: Fixed Company interface to include `name` and `email` properties
+- **API Service Integration**: Added flags API service with proper multipart/form-data handling
+- **Static File Serving**: Configured uploads directory for PDF receipt storage
+
+#### 📁 New Files Added
+- `routes/flags.js` - Backend flag management endpoints
+- `routes/products.js` - Dedicated product management endpoints
+- `models/Flag.js` - Flag data model with virtual fields
+- `models/Analytics.js` - Advanced analytics data model with risk assessment
+- `services/analyticsService.js` - Analytics calculation and aggregation service
+- `frontend/src/pages/Flags.tsx` - Frontend flagging interface
+- `frontend/src/components/AnalyticsDashboard.tsx` - Comprehensive analytics dashboard
+- `uploads/` - Directory for file uploads
+
+#### 🐛 Bug Fixes
+- Resolved 404 errors in product fetching API calls
+- Fixed TypeScript compilation errors in Company interface
+- Corrected API endpoint routing for products
+- **Fixed Loss Percentage Calculation**: Corrected the loss calculation from incorrect 5% to proper 95% when 100 bought and 5 sold
+- **Added Time-based Loss Calculation**: Implemented automatic 2% additional loss per month for products older than 6 months
+
 ## 🙏 Acknowledgments
 
 - React and Node.js communities

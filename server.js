@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,8 @@ const orderRoutes = require('./routes/orders');
 const deliveryRoutes = require('./routes/delivery');
 const analyticsRoutes = require('./routes/analytics');
 const notificationRoutes = require('./routes/notifications');
+const flagRoutes = require('./routes/flags');
+const productRoutes = require('./routes/products');
 
 // Security middleware
 app.use(helmet());
@@ -38,6 +41,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery-track-bd', {
   useNewUrlParser: true,
@@ -53,6 +59,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/flags', flagRoutes);
+app.use('/api/products', productRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -16,6 +16,7 @@ import Deliveries from './pages/delivery/Deliveries';
 import DeliveryDetails from './pages/delivery/DeliveryDetails';
 import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
+import Flags from './pages/Flags';
 import Users from './pages/admin/Users';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -50,6 +51,7 @@ const AppRoutes: React.FC = () => {
         <Route path="deliveries/:deliveryId" element={<DeliveryDetails />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="notifications" element={<Notifications />} />
+        <Route path="flags" element={<Flags />} />
         <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><Users /></ProtectedRoute>} />
       </Route>
       {/* Catch all */}

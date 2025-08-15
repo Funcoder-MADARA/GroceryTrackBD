@@ -507,6 +507,37 @@ router.get('/area/:area', authenticateToken, validatePagination, async (req, res
   }
 });
 
+// Get products by company (for flags feature)
+router.get('/products', authenticateToken, async (req, res) => {
+  try {
+    const { companyId } = req.query;
+    
+    if (!companyId) {
+      return res.status(400).json({
+        error: 'Company ID required',
+        message: 'Please provide a company ID'
+      });
+    }
+
+    const products = await Product.find({ 
+      companyId: companyId,
+      isActive: true,
+      isAvailable: true
+    })
+    .select('_id name description category price unit stockQuantity')
+    .sort({ name: 1 });
+
+    res.json(products);
+
+  } catch (error) {
+    console.error('Get products by company error:', error);
+    res.status(500).json({
+      error: 'Failed to get products',
+      message: 'An error occurred while fetching products'
+    });
+  }
+});
+
 // Get all orders (admin)
 router.get('/', authenticateToken, authorizeAdmin, validatePagination, async (req, res) => {
   try {

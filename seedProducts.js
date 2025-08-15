@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Product = require('./models/Products'); // relative path
+const Product = require('./models/Product'); // relative path
 const { faker } = require('@faker-js/faker');
 
 async function seedProducts() {
@@ -26,21 +26,13 @@ async function seedProducts() {
       description: faker.commerce.productDescription(),
       companyId: new mongoose.Types.ObjectId("689887fa0f48b8187ad706ea"), // ensure ObjectId type
       category,
-      subCategory: faker.commerce.department(),
-      price: parseFloat(faker.commerce.price({ min: 1, max: 100, dec: 2 })),
+      unitPrice: parseFloat(faker.commerce.price({ min: 1, max: 100, dec: 2 })), // Changed from 'price' to 'unitPrice'
       unit,
       stockQuantity: faker.number.int({ min: 10, max: 100 }),
       minOrderQuantity: faker.number.int({ min: 1, max: 5 }),
       brand: faker.company.name(),
-      weight: parseFloat(faker.number.float({ min: 0.1, max: 10, precision: 0.01 }).toFixed(2)),
-      weightUnit,
       images: [faker.image.urlLoremFlickr({ category: 'food', width: 640, height: 480 })],
       isActive: true,
-      isAvailable: true,
-      totalOrders: 0,
-      totalSold: 0,
-      isFeatured: faker.datatype.boolean(),
-      isSeasonal: faker.datatype.boolean(),
       expiryDate: faker.date.soon({ days: 365 }),
       manufacturingDate: faker.date.past({ years: 1 }),
       tags: faker.helpers.uniqueArray(() => faker.commerce.productAdjective(), 3),

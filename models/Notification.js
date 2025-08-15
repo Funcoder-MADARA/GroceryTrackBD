@@ -151,4 +151,4 @@ notificationSchema.statics.getUnreadCount = function(recipientId) {
   });
 };
 
-module.exports = mongoose.model('Notification', notificationSchema);
+module.exports = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);

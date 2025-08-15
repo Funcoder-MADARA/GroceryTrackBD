@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 1591;
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const orderRoutes = require('./routes/orders');
+const productRoutes = require('./routes/products');
 const deliveryRoutes = require('./routes/delivery');
 const analyticsRoutes = require('./routes/analytics');
 const notificationRoutes = require('./routes/notifications');
@@ -27,7 +28,7 @@ app.use(compression());
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 1000 // temporarily increased for development
 });
 app.use(limiter);
 
@@ -56,6 +57,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery-t
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);

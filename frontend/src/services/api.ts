@@ -56,20 +56,20 @@ export const authAPI = {
     api.post('/auth/forgot-password', { email }),
 };
 
-// Order API
 export const orderAPI = {
   getOrders: (page = 1, limit = 10, filters?: { status?: string; startDate?: string; endDate?: string }) =>
-    api.get('/orders/history', { params: { page, limit, ...filters } }),
+    api.get('/orders', { params: { page, limit, ...filters } }), // changed /history → /orders
     
   getOrderById: (orderId: string) =>
     api.get(`/orders/${orderId}`),
     
   updateOrderStatus: (orderId: string, status: string, notes?: string) =>
-    api.patch(`/orders/${orderId}/status`, { status, notes }),
+    api.put(`/orders/${orderId}/status`, { status, rejectionReason: notes }), // note: backend expects 'rejectionReason' for company update
     
   createOrder: (orderData: any) =>
     api.post('/orders', orderData),
 };
+
 
 // Profile API
 export const profileAPI = {
@@ -106,24 +106,19 @@ export const ordersAPI = {
   createOrder: (orderData: any) =>
     api.post('/orders', orderData),
   
-  getShopkeeperOrders: (params?: any) =>
-    api.get('/orders/shopkeeper', { params }),
-  
-  getCompanyOrders: (params?: any) =>
-    api.get('/orders/company', { params }),
-  
   getOrder: (orderId: string) =>
     api.get(`/orders/${orderId}`),
   
   updateOrderStatus: (orderId: string, status: string, rejectionReason?: string) =>
     api.put(`/orders/${orderId}/status`, { status, rejectionReason }),
   
+  assignDeliveryWorker: (orderId: string, deliveryWorkerId: string) =>
+    api.put(`/orders/${orderId}/assign`, { deliveryWorkerId }),
+  
   cancelOrder: (orderId: string, cancellationReason: string) =>
     api.put(`/orders/${orderId}/cancel`, { cancellationReason }),
   
-  getOrdersByArea: (area: string, params?: any) =>
-    api.get(`/orders/area/${area}`, { params }),
-  
+  // All orders (role-based filtering handled by backend)
   getAllOrders: (params?: any) =>
     api.get('/orders', { params }),
     
@@ -246,13 +241,16 @@ export const notificationsAPI = {
     api.post('/notifications', notificationData),
 };
 
-// Products API (for future use)
+// Products API
 export const productsAPI = {
   getProducts: (params?: any) =>
     api.get('/products', { params }),
   
   getProduct: (productId: string) =>
     api.get(`/products/${productId}`),
+  
+  getProductsByCompany: (companyId: string, params?: any) =>
+    api.get(`/products/company/${companyId}`, { params }),
   
   createProduct: (productData: any) =>
     api.post('/products', productData),
@@ -262,6 +260,12 @@ export const productsAPI = {
   
   deleteProduct: (productId: string) =>
     api.delete(`/products/${productId}`),
+  
+  getCategories: () =>
+    api.get('/products/categories'),
+  
+  updateStock: (productId: string, quantity: number, operation?: string) =>
+    api.put(`/products/${productId}/stock`, { quantity, operation }),
 };
 
 // Flags API

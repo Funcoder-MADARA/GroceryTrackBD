@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ordersAPI, profileAPI } from '../../services/api';
+import { ordersAPI, profileAPI, productsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 
 interface Company {
-  id: string;
+  _id: string;
   name: string;
-  companyInfo: {
+  companyInfo?: {
     companyName: string;
   };
 }
 
 interface Product {
-  id: string;
+  _id: string;
   name: string;
-  price: number;
+  description: string;
+  category: string;
+  unitPrice?: number;
+  price?: number; // Fallback for seed data
   unit: string;
   stockQuantity: number;
+  minOrderQuantity: number;
+  maxOrderQuantity?: number;
+  images: string[];
+  inStock: boolean;
 }
 
 interface OrderItem {
-  productId: string;
+  productId?: string;
+  productName: string;
   quantity: number;
-  notes?: string;
+  unitPrice: number;
+  unit: string;
 }
 
 const CreateOrder: React.FC = () => {
@@ -34,7 +43,7 @@ const CreateOrder: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [products, setProducts] = useState<Product[]>([]);
-  const [items, setItems] = useState<OrderItem[]>([{ productId: '', quantity: 1 }]);
+  const [items, setItems] = useState<OrderItem[]>([{ productName: '', quantity: 1, unitPrice: 0, unit: 'piece' }]);
   const [loading, setLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState({
     deliveryArea: user?.area || '',
@@ -62,20 +71,46 @@ const CreateOrder: React.FC = () => {
   // Load products when company is selected
   useEffect(() => {
     const loadProducts = async () => {
-      if (!selectedCompany) return;
+      if (!selectedCompany) {
+        setProducts([]);
+        // Reset items when no company is selected
+        setItems([{ productName: '', quantity: 1, unitPrice: 0, unit: 'piece' }]);
+        return;
+      }
+      
       try {
-        const response = await ordersAPI.getCompanyProducts(selectedCompany);
+        const response = await productsAPI.getProductsByCompany(selectedCompany, { inStock: 'true' });
         setProducts(response.data.products);
+        // Reset items when company changes to clear any previously selected products
+        setItems([{ productName: '', quantity: 1, unitPrice: 0, unit: 'piece' }]);
       } catch (error) {
-        toast.error('Failed to load products');
+        console.error('Failed to load products:', error);
+        toast.error('Failed to load company products');
       }
     };
-    if (selectedCompany) {
-      loadProducts();
-    }
+    
+    loadProducts();
   }, [selectedCompany]);
 
-  // Handle item changes
+  // Handle product selection
+  const handleProductSelect = (index: number, productId: string) => {
+    const selectedProduct = products.find(p => p._id === productId);
+    if (!selectedProduct) return;
+    
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      productId: selectedProduct._id,
+      productName: selectedProduct.name,
+      unitPrice: selectedProduct.unitPrice || selectedProduct.price || 0,
+      unit: selectedProduct.unit,
+      // Reset quantity to minimum order or 1
+      quantity: Math.max(selectedProduct.minOrderQuantity || 1, 1)
+    };
+    setItems(newItems);
+  };
+
+  // Handle item changes (for manual fields like quantity)
   const handleItemChange = (index: number, field: keyof OrderItem, value: string | number) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
@@ -84,7 +119,7 @@ const CreateOrder: React.FC = () => {
 
   // Add new item
   const addItem = () => {
-    setItems([...items, { productId: '', quantity: 1 }]);
+    setItems([...items, { productName: '', quantity: 1, unitPrice: 0, unit: 'piece' }]);
   };
 
   // Remove item
@@ -100,16 +135,26 @@ const CreateOrder: React.FC = () => {
     setLoading(true);
 
     try {
+      // Validate that all items have productId
+      const invalidItems = items.filter(item => !item.productId || !item.productName);
+      if (invalidItems.length > 0) {
+        toast.error('Please select products for all order items');
+        setLoading(false);
+        return;
+      }
+
       const orderData = {
         companyId: selectedCompany,
         items,
         ...orderDetails
       };
 
+      console.log('Submitting order data:', orderData); // Debug log
       const response = await ordersAPI.createOrder(orderData);
       toast.success('Order created successfully!');
       navigate(`/orders/${response.data.order.orderNumber}`);
     } catch (error: any) {
+      console.error('Order creation error:', error);
       toast.error(error.response?.data?.message || 'Failed to create order');
     } finally {
       setLoading(false);
@@ -119,15 +164,11 @@ const CreateOrder: React.FC = () => {
   // Calculate totals
   const calculateTotals = () => {
     const totals = items.reduce((acc, item) => {
-      const product = products.find(p => p.id === item.productId);
-      if (product) {
-        const itemTotal = product.price * item.quantity;
-        return {
-          subtotal: acc.subtotal + itemTotal,
-          items: acc.items + item.quantity
-        };
-      }
-      return acc;
+      const itemTotal = item.unitPrice * item.quantity;
+      return {
+        subtotal: acc.subtotal + itemTotal,
+        items: acc.items + item.quantity
+      };
     }, { subtotal: 0, items: 0 });
 
     const tax = totals.subtotal * 0.05;
@@ -155,8 +196,8 @@ const CreateOrder: React.FC = () => {
           >
             <option value="">Select a company</option>
             {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.companyInfo.companyName}
+              <option key={company._id} value={company._id}>
+                {company.companyInfo?.companyName || company.name}
               </option>
             ))}
           </select>
@@ -166,41 +207,85 @@ const CreateOrder: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Order Items</h2>
           {items.map((item, index) => (
-            <div key={index} className="flex gap-4 mb-4">
-              <select
-                value={item.productId}
-                onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
-                className="flex-1 p-2 border rounded"
-                required
-              >
-                <option value="">Select a product</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} - {product.price}৳/{product.unit}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                value={item.quantity}
-                onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                min="1"
-                className="w-32 p-2 border rounded"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => removeItem(index)}
-                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded"
-              >
-                Remove
-              </button>
+            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border border-gray-200 rounded mb-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Product *
+                </label>
+                {selectedCompany && products.length > 0 ? (
+                  <select
+                    value={item.productId || ''}
+                    onChange={(e) => handleProductSelect(index, e.target.value)}
+                    className="w-full p-2 border rounded"
+                    required
+                  >
+                    <option value="">Choose a product</option>
+                    {products.map((product) => (
+                      <option key={product._id} value={product._id}>
+                        {product.name} - ৳{(product.unitPrice || product.price || 0).toFixed(2)}/{product.unit}
+                        {product.stockQuantity <= 10 && ` (Low Stock: ${product.stockQuantity})`}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full p-2 border rounded bg-gray-100 text-gray-500">
+                    {!selectedCompany ? 'Please select a company first' : 'Loading products...'}
+                  </div>
+                )}
+                {item.productName && (
+                  <div className="mt-1 text-sm text-gray-600">
+                    Selected: {item.productName} - ৳{item.unitPrice.toFixed(2)}/{item.unit}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                  min={item.productId ? products.find(p => p._id === item.productId)?.minOrderQuantity || 1 : 1}
+                  max={item.productId ? products.find(p => p._id === item.productId)?.maxOrderQuantity : undefined}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                {item.productId && (() => {
+                  const product = products.find(p => p._id === item.productId);
+                  return product && (
+                    <div className="mt-1 text-xs text-gray-500">
+                      Min: {product.minOrderQuantity || 1}
+                      {product.maxOrderQuantity && `, Max: ${product.maxOrderQuantity}`}
+                      {product.stockQuantity <= 10 && (
+                        <span className="text-orange-600"> (Low Stock: {product.stockQuantity})</span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="flex items-end">
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="md:col-span-4">
+                <p className="text-sm text-gray-600">
+                  Total for this item: ৳{(item.quantity * item.unitPrice).toFixed(2)}
+                </p>
+              </div>
             </div>
           ))}
           <button
             type="button"
             onClick={addItem}
-            className="mt-4 px-4 py-2 bg-green-50 text-green-600 rounded hover:bg-green-100"
+            className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
             Add Item
           </button>

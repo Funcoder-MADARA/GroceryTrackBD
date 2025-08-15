@@ -121,7 +121,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Update API default headers
       api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error?.response?.data?.message || error.message);
       throw error;
     }
   };

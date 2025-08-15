@@ -1,6 +1,6 @@
 const Analytics = require('../models/Analytics');
 const Flag = require('../models/Flag');
-const Product = require('../models/Product');
+const Product = require('../models/Products');
 
 class AnalyticsService {
   /**

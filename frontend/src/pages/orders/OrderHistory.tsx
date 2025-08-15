@@ -1,8 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ordersAPI } from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { formatDate } from '../../utils/formatters';
+import StatusBadge from '../../components/StatusBadge';
+
+// Enhanced TypeScript interfaces
+interface OrderItem {
+  productName: string;
+  quantity: number;
+  totalPrice: number;
+}
 
 interface OrderSummary {
   id: string;
@@ -10,14 +18,16 @@ interface OrderSummary {
   companyName: string;
   shopName: string;
   totalAmount: number;
-  status: string;
+  status: 'pending' | 'approved' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'rejected';
   createdAt: string;
-  deliveredAt?: string;
-  items: Array<{
-    productName: string;
-    quantity: number;
-    totalPrice: number;
-  }>;
+  deliveredAt?: string | null;
+  items: OrderItem[];
+}
+
+interface OrderStats {
+  totalOrders: number;
+  statusCounts: Record<string, number>;
+  totalAmount: number;
 }
 
 interface PaginationInfo {
@@ -26,6 +36,19 @@ interface PaginationInfo {
   totalOrders: number;
   hasNextPage: boolean;
   hasPrevPage: boolean;
+}
+
+interface OrderFilters {
+  status: string;
+  startDate: string;
+  endDate: string;
+  searchTerm: string;
+}
+
+interface OrderHistoryResponse {
+  orders: OrderSummary[];
+  pagination: PaginationInfo;
+  summary: OrderStats;
 }
 
 const OrderHistory: React.FC = () => {
@@ -38,6 +61,11 @@ const OrderHistory: React.FC = () => {
     hasPrevPage: false,
   });
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<OrderStats>({
+    totalOrders: 0,
+    statusCounts: {},
+    totalAmount: 0,
+  });
   const [filters, setFilters] = useState({
     status: '',
     startDate: '',
@@ -45,15 +73,9 @@ const OrderHistory: React.FC = () => {
     searchTerm: '',
   });
 
-  const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-blue-100 text-blue-800',
-    processing: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-  };
 
-  const fetchOrders = async (page: number = 1) => {
+
+  const fetchOrders = useCallback(async (page: number = 1) => {
     try {
       setLoading(true);
       const params = {
@@ -61,39 +83,98 @@ const OrderHistory: React.FC = () => {
         limit: 10,
         ...filters,
       };
+      
       const response = await ordersAPI.getOrderHistory(params);
-      setOrders(response.data.orders);
-      setPagination(response.data.pagination);
-    } catch (error) {
-      toast.error('Failed to fetch order history');
+      const data: OrderHistoryResponse = response.data;
+      
+      // Ensure data integrity - items array should never be undefined
+      const processedOrders = data.orders.map(order => ({
+        ...order,
+        items: Array.isArray(order.items) ? order.items : [],
+        companyName: order.companyName || 'N/A',
+        shopName: order.shopName || 'N/A',
+        totalAmount: order.totalAmount || 0
+      }));
+      
+      setOrders(processedOrders);
+      setPagination(data.pagination);
+      setStats(data.summary);
+    } catch (error: any) {
+      console.error('Fetch orders error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to fetch order history';
+      toast.error(errorMessage);
+      
+      // Set empty state on error
+      setOrders([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalOrders: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      });
+      setStats({
+        totalOrders: 0,
+        statusCounts: {},
+        totalAmount: 0,
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchOrders();
   }, [filters]);
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
+useEffect(() => {
+  fetchOrders(1); // always fetch page 1 when filters change
+}, [fetchOrders]);
+
+// Initial load
+useEffect(() => {
+  fetchOrders(1);
+}, []);
+
+const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const { name, value } = e.target;
+  setFilters(prev => ({ ...prev, [name]: value }));
+};
 
   const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
     fetchOrders(newPage);
   };
+  
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Order History</h1>
-        <Link
-          to="/orders/create"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Create New Order
-        </Link>
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold">Order History</h1>
+          <Link
+            to="/orders/create"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Create New Order
+          </Link>
+        </div>
+        
+        {/* Order Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500">Total Orders</h3>
+            <p className="text-2xl font-semibold">{stats.totalOrders}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500">Total Amount</h3>
+            <p className="text-2xl font-semibold">৳{stats.totalAmount.toLocaleString()}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500">Pending Orders</h3>
+            <p className="text-2xl font-semibold text-yellow-600">{stats.statusCounts.pending || 0}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500">Delivered Orders</h3>
+            <p className="text-2xl font-semibold text-green-600">{stats.statusCounts.delivered || 0}</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -176,9 +257,7 @@ const OrderHistory: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm ${statusColors[order.status]}`}>
-                    {order.status}
-                  </span>
+                  <StatusBadge status={order.status} />
                   <p className="mt-2 text-lg font-semibold">৳{order.totalAmount.toFixed(2)}</p>
                 </div>
               </div>
@@ -186,7 +265,7 @@ const OrderHistory: React.FC = () => {
               <div className="mt-4 border-t pt-4">
                 <h4 className="text-sm font-medium text-gray-600 mb-2">Items:</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {order.items.map((item, index) => (
+                  {(order.items || []).map((item, index) => (
                     <div key={index} className="text-sm">
                       <span className="text-gray-800">{item.productName}</span>
                       <span className="text-gray-500"> × {item.quantity}</span>

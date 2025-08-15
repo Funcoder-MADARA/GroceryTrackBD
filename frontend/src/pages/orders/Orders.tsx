@@ -40,19 +40,17 @@ const Orders: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      let response;
-
-      if (user?.role === 'shopkeeper') {
-        response = await ordersAPI.getShopkeeperOrders();
-      } else if (user?.role === 'company_rep') {
-        response = await ordersAPI.getCompanyOrders();
-      } else {
-        response = await ordersAPI.getAllOrders();
-      }
-
+      console.log('Fetching orders for user:', user?.role);
+      
+      // Use the general orders endpoint - backend handles role-based filtering
+      const response = await ordersAPI.getAllOrders();
+      
+      console.log('Orders response:', response.data);
       setOrders(response.data.orders);
-    } catch (error) {
-      toast.error('Failed to fetch orders');
+    } catch (error: any) {
+      console.error('Failed to fetch orders:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to fetch orders';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -90,16 +88,17 @@ const Orders: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Orders</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
           <p className="text-gray-600 mt-1">Manage your orders</p>
         </div>
         {user?.role === 'shopkeeper' && (
-          <Link
-            to="/orders/create"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          <button
+            onClick={() => navigate('/orders/create')}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
           >
+            <span>+</span>
             Create Order
-          </Link>
+          </button>
         )}
       </div>
 

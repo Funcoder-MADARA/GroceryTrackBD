@@ -69,9 +69,7 @@ const Dashboard: React.FC = () => {
 
   const { data: recentOrdersResponse } = useQuery(
     ['recentOrders'],
-    () => user?.role === 'shopkeeper' 
-      ? ordersAPI.getShopkeeperOrders({ limit: 5 })
-      : ordersAPI.getCompanyOrders({ limit: 5 }),
+    () => ordersAPI.getAllOrders({ limit: 5 }),
     {
       enabled: ['shopkeeper', 'company_rep'].includes(user?.role || ''),
     }
@@ -87,7 +85,7 @@ const Dashboard: React.FC = () => {
     ['pendingUsers'],
     () => {
       const token = localStorage.getItem('token');
-      return fetch('http://localhost:5000/api/auth/pending-users', {
+      return fetch('http://localhost:1591/api/auth/pending-users', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -102,7 +100,7 @@ const Dashboard: React.FC = () => {
   const handleApprove = async (userId: string): Promise<void> => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/approve-user/${userId}`, {
+      const response = await fetch(`http://localhost:1591/api/auth/approve-user/${userId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

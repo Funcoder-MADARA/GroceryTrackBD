@@ -19,7 +19,6 @@ const deliveryRoutes = require('./routes/delivery');
 const analyticsRoutes = require('./routes/analytics');
 const notificationRoutes = require('./routes/notifications');
 const flagRoutes = require('./routes/flags');
-const productRoutes = require('./routes/products');
 
 // Security middleware
 app.use(helmet());
@@ -62,7 +61,6 @@ app.use('/api/delivery', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/flags', flagRoutes);
-app.use('/api/products', productRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

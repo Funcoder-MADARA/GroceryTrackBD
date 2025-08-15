@@ -22,4 +22,7 @@ router.get('/:orderId', authenticateToken, getOrderByIdOrNumber);
 // Update order status
 router.put('/:orderId/status', authenticateToken, updateOrderStatus);
 
+// Assign delivery worker to order
+router.put('/:orderId/assign', authenticateToken, assignDeliveryWorker);
+
 module.exports = router;

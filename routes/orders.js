@@ -1,12 +1,9 @@
 const express = require('express');
-const { authenticateToken } = require('../middleware/auth');
-const {
-  getOrders,
-  getOrderByIdOrNumber,
-  createOrder,
-  updateOrderStatus,
-  assignDeliveryWorker
-} = require('../controllers/orderController');
+const Order = require('../models/Order');
+const Product = require('../models/Products');
+const User = require('../models/User');
+const { validateOrderCreation, validateOrderStatusUpdate, validateObjectId, validatePagination } = require('../middleware/validation');
+const { authenticateToken, authorizeShopkeeper, authorizeCompanyRep, authorizeAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 

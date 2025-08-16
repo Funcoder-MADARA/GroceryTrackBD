@@ -49,11 +49,16 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 require('dotenv').config();
 
 
-const uri = process.env.MONGO_URI;
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-mongoose.connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
+if (!mongoUri) {
+  console.error('MongoDB connection string not provided. Set MONGO_URI or MONGODB_URI in your .env');
+  process.exit(1);
+}
+
+mongoose.connect(mongoUri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 })
 .then(() => console.log('MongoDB connected successfully!'))
 .catch(err => console.error('MongoDB connection error:', err));

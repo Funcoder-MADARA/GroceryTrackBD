@@ -1,157 +1,139 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-  // Basic Information
   name: {
     type: String,
-    required: [true, 'Product name is required'],
+    required: true,
     trim: true
   },
   description: {
     type: String,
-    required: [true, 'Product description is required']
-  },
-  
-  // Company Information
-  companyId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Company ID is required']
-  },
-  
-  // Category and Classification
-  category: {
-    type: String,
-    required: [true, 'Product category is required'],
-    enum: ['groceries', 'beverages', 'snacks', 'household', 'personal_care', 'frozen_foods', 'dairy', 'bakery', 'others']
-  },
-  subCategory: {
-    type: String,
     trim: true
   },
-  
-  // Pricing
-  price: {
+  category: {
+    type: String,
+    required: true,
+    enum: [
+      'dairy', 'meat', 'seafood', 'fruits', 'vegetables', 
+      'grains', 'bakery', 'beverages', 'snacks', 
+      'frozen', 'canned', 'condiments', 'other'
+    ]
+  },
+  unitPrice: {
     type: Number,
-    required: [true, 'Product price is required'],
-    min: [0, 'Price cannot be negative']
+    required: true,
+    min: 0
   },
   unit: {
     type: String,
-    required: [true, 'Product unit is required'],
-    enum: ['kg', 'gram', 'liter', 'ml', 'piece', 'pack', 'dozen', 'bottle', 'can', 'box']
+    required: true,
+    enum: ['piece', 'kg', 'liter', 'box', 'pack', 'dozen'],
+    default: 'piece'
   },
-  
-  // Inventory
   stockQuantity: {
     type: Number,
-    required: [true, 'Stock quantity is required'],
-    min: [0, 'Stock quantity cannot be negative']
+    required: true,
+    min: 0,
+    default: 0
   },
   minOrderQuantity: {
     type: Number,
     default: 1,
-    min: [1, 'Minimum order quantity must be at least 1']
+    min: 1
   },
-  
-  // Product Details
-  brand: {
-    type: String,
-    trim: true
-  },
-  weight: {
+  maxOrderQuantity: {
     type: Number,
-    min: [0, 'Weight cannot be negative']
+    default: null // null means no limit
   },
-  weightUnit: {
-    type: String,
-    enum: ['kg', 'gram', 'liter', 'ml']
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  
-  // Images
-  images: [{
-    type: String,
-    required: [true, 'At least one product image is required']
-  }],
-  
-  // Status
   isActive: {
     type: Boolean,
     default: true
   },
-  isAvailable: {
-    type: Boolean,
-    default: true
+  images: [{
+    type: String // URLs to product images
+  }],
+  tags: [{
+    type: String,
+    trim: true
+  }],
+  nutritionInfo: {
+    calories: Number,
+    protein: Number,
+    carbs: Number,
+    fat: Number,
+    fiber: Number
   },
-  
-  // Popularity and Analytics
-  totalOrders: {
-    type: Number,
-    default: 0
-  },
-  totalSold: {
-    type: Number,
-    default: 0
-  },
-  
-  // Special Features
-  isFeatured: {
-    type: Boolean,
-    default: false
-  },
-  isSeasonal: {
-    type: Boolean,
-    default: false
-  },
-  
-  // Expiry and Manufacturing
   expiryDate: {
     type: Date
   },
   manufacturingDate: {
     type: Date
   },
-  
-  // Tags for search
-  tags: [{
+  brand: {
     type: String,
     trim: true
-  }]
+  },
+  barcode: {
+    type: String,
+    unique: true,
+    sparse: true // allows multiple null values
+  }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Indexes for better query performance
-productSchema.index({ companyId: 1 });
-productSchema.index({ category: 1 });
-productSchema.index({ isActive: 1 });
-productSchema.index({ isAvailable: 1 });
+productSchema.index({ companyId: 1, isActive: 1 });
+productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ name: 'text', description: 'text', tags: 'text' });
 
-// Virtual for price per unit
-productSchema.virtual('pricePerUnit').get(function() {
-  return this.price;
+// Virtual for checking if product is in stock
+productSchema.virtual('inStock').get(function() {
+  return this.stockQuantity > 0;
 });
 
-// Method to check if product is in stock
-productSchema.methods.isInStock = function(quantity = 1) {
-  return this.stockQuantity >= quantity && this.isAvailable && this.isActive;
+// Virtual for checking if product is low stock (less than 10)
+productSchema.virtual('lowStock').get(function() {
+  return this.stockQuantity > 0 && this.stockQuantity < 10;
+});
+
+// Method to check if a quantity can be ordered
+productSchema.methods.canOrder = function(quantity) {
+  if (!this.isActive) return false;
+  if (quantity < this.minOrderQuantity) return false;
+  if (this.maxOrderQuantity && quantity > this.maxOrderQuantity) return false;
+  if (quantity > this.stockQuantity) return false;
+  return true;
 };
 
-// Method to update stock
-productSchema.methods.updateStock = function(quantity, operation = 'decrease') {
-  if (operation === 'decrease') {
-    this.stockQuantity = Math.max(0, this.stockQuantity - quantity);
-  } else if (operation === 'increase') {
-    this.stockQuantity += quantity;
+// Method to reduce stock after order
+productSchema.methods.reduceStock = function(quantity) {
+  if (this.stockQuantity >= quantity) {
+    this.stockQuantity -= quantity;
+    return this.save();
   }
-  return this.save();
+  throw new Error('Insufficient stock');
 };
 
-// Method to get public product info
-productSchema.methods.getPublicInfo = function() {
-  const productObject = this.toObject();
-  return productObject;
+// Static method to find products by company
+productSchema.statics.findByCompany = function(companyId) {
+  return this.find({ companyId, isActive: true });
 };
 
-module.exports = mongoose.model('Product', productSchema);
+// Static method to search products
+productSchema.statics.searchProducts = function(companyId, searchTerm) {
+  return this.find({
+    companyId,
+    isActive: true,
+    $text: { $search: searchTerm }
+  });
+};
+
+module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

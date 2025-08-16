@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:1591/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -48,13 +48,28 @@ export const authAPI = {
   
   getProfile: () =>
     api.get('/auth/me'),
-  
+    
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
   
   forgotPassword: (email: string) =>
     api.post('/auth/forgot-password', { email }),
 };
+
+export const orderAPI = {
+  getOrders: (page = 1, limit = 10, filters?: { status?: string; startDate?: string; endDate?: string }) =>
+    api.get('/orders', { params: { page, limit, ...filters } }), // changed /history → /orders
+    
+  getOrderById: (orderId: string) =>
+    api.get(`/orders/${orderId}`),
+    
+  updateOrderStatus: (orderId: string, status: string, notes?: string) =>
+    api.put(`/orders/${orderId}/status`, { status, rejectionReason: notes }), // note: backend expects 'rejectionReason' for company update
+    
+  createOrder: (orderData: any) =>
+    api.post('/orders', orderData),
+};
+
 
 // Profile API
 export const profileAPI = {
@@ -91,26 +106,30 @@ export const ordersAPI = {
   createOrder: (orderData: any) =>
     api.post('/orders', orderData),
   
-  getShopkeeperOrders: (params?: any) =>
-    api.get('/orders/shopkeeper', { params }),
-  
-  getCompanyOrders: (params?: any) =>
-    api.get('/orders/company', { params }),
-  
   getOrder: (orderId: string) =>
     api.get(`/orders/${orderId}`),
   
   updateOrderStatus: (orderId: string, status: string, rejectionReason?: string) =>
     api.put(`/orders/${orderId}/status`, { status, rejectionReason }),
   
+  assignDeliveryWorker: (orderId: string, deliveryWorkerId: string) =>
+    api.put(`/orders/${orderId}/assign`, { deliveryWorkerId }),
+  
   cancelOrder: (orderId: string, cancellationReason: string) =>
     api.put(`/orders/${orderId}/cancel`, { cancellationReason }),
   
-  getOrdersByArea: (area: string, params?: any) =>
-    api.get(`/orders/area/${area}`, { params }),
-  
+  // All orders (role-based filtering handled by backend)
   getAllOrders: (params?: any) =>
     api.get('/orders', { params }),
+    
+  getOrderHistory: (params?: any) =>
+    api.get('/orders/history', { params }),
+    
+  getOrderTimeline: (orderId: string) =>
+    api.get(`/orders/${orderId}/timeline`),
+    
+  getCompanyProducts: (companyId: string) =>
+    api.get(`/products/company/${companyId}`),
 };
 
 // Deliveries API
@@ -145,10 +164,41 @@ export const deliveriesAPI = {
 
 // Analytics API
 export const analyticsAPI = {
-  getShopkeeperAnalytics: (params?: any) =>
+  // Company Analytics
+  getCompanyPerformanceSummary: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/summary`, { params }),
+  
+  getCompanyRiskAssessment: (companyId: string) =>
+    api.get(`/analytics/company/${companyId}/risk`),
+  
+  getCompanyWeeklyAnalytics: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/weekly`, { params }),
+  
+  getCompanyQuarterlyAnalytics: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/quarterly`, { params }),
+  
+  getCompanyPerformance: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/performance`, { params }),
+  
+  getCompanyAnalyticsByRange: (companyId: string, params?: any) =>
+    api.get(`/analytics/company/${companyId}/range`, { params }),
+  
+  getCompanyDashboard: (companyId: string) =>
+    api.get(`/analytics/dashboard/${companyId}`),
+  
+  // Product Analytics
+  getProductPerformanceTrends: (productId: string, params?: any) =>
+    api.get(`/analytics/product/${productId}/trends`, { params }),
+  
+  // Shopkeeper Analytics
+  getShopkeeperAnalytics: (shopkeeperId: string, params?: any) =>
+    api.get(`/analytics/shopkeeper/${shopkeeperId}`, { params }),
+  
+  // Legacy endpoints for backward compatibility
+  getShopkeeperAnalyticsLegacy: (params?: any) =>
     api.get('/analytics/shopkeeper', { params }),
   
-  getCompanyAnalytics: (params?: any) =>
+  getCompanyAnalyticsLegacy: (params?: any) =>
     api.get('/analytics/company', { params }),
   
   getAreaAnalytics: (area: string, params?: any) =>
@@ -191,13 +241,16 @@ export const notificationsAPI = {
     api.post('/notifications', notificationData),
 };
 
-// Products API (for future use)
+// Products API
 export const productsAPI = {
   getProducts: (params?: any) =>
     api.get('/products', { params }),
   
   getProduct: (productId: string) =>
     api.get(`/products/${productId}`),
+  
+  getProductsByCompany: (companyId: string, params?: any) =>
+    api.get(`/products/company/${companyId}`, { params }),
   
   createProduct: (productData: any) =>
     api.post('/products', productData),
@@ -207,6 +260,25 @@ export const productsAPI = {
   
   deleteProduct: (productId: string) =>
     api.delete(`/products/${productId}`),
+  
+  getCategories: () =>
+    api.get('/products/categories'),
+  
+  updateStock: (productId: string, quantity: number, operation?: string) =>
+    api.put(`/products/${productId}/stock`, { quantity, operation }),
+};
+
+// Flags API
+export const flagsAPI = {
+  createFlag: (flagData: FormData) =>
+    api.post('/flags', flagData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+  
+  getMyFlags: () =>
+    api.get('/flags/mine'),
 };
 
 export default api;

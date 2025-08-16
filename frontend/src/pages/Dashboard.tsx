@@ -42,18 +42,18 @@ const Dashboard: React.FC = () => {
   // Fetch dashboard data based on user role
   const { data: shopkeeperStatsResponse } = useQuery(
     ['shopkeeperStats'],
-    () => analyticsAPI.getShopkeeperAnalytics(),
+    () => analyticsAPI.getShopkeeperAnalytics(user?._id || ''),
     {
-      enabled: user?.role === 'shopkeeper',
+      enabled: user?.role === 'shopkeeper' && !!user?._id,
     }
   );
   const shopkeeperStats = shopkeeperStatsResponse?.data || shopkeeperStatsResponse;
 
   const { data: companyStatsResponse } = useQuery(
     ['companyStats'],
-    () => analyticsAPI.getCompanyAnalytics(),
+    () => analyticsAPI.getCompanyDashboard(user?._id || ''),
     {
-      enabled: user?.role === 'company_rep',
+      enabled: user?.role === 'company_rep' && !!user?._id,
     }
   );
   const companyStats = companyStatsResponse?.data || companyStatsResponse;
@@ -69,9 +69,7 @@ const Dashboard: React.FC = () => {
 
   const { data: recentOrdersResponse } = useQuery(
     ['recentOrders'],
-    () => user?.role === 'shopkeeper' 
-      ? ordersAPI.getShopkeeperOrders({ limit: 5 })
-      : ordersAPI.getCompanyOrders({ limit: 5 }),
+    () => ordersAPI.getAllOrders({ limit: 5 }),
     {
       enabled: ['shopkeeper', 'company_rep'].includes(user?.role || ''),
     }
@@ -87,7 +85,7 @@ const Dashboard: React.FC = () => {
     ['pendingUsers'],
     () => {
       const token = localStorage.getItem('token');
-      return fetch('http://localhost:5000/api/auth/pending-users', {
+      return fetch('http://localhost:1591/api/auth/pending-users', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -102,7 +100,7 @@ const Dashboard: React.FC = () => {
   const handleApprove = async (userId: string): Promise<void> => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/approve-user/${userId}`, {
+      const response = await fetch(`http://localhost:1591/api/auth/approve-user/${userId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -184,9 +182,9 @@ const Dashboard: React.FC = () => {
                   <ShoppingCart className="h-8 w-8 text-primary-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Orders</p>
+                  <p className="text-sm font-medium text-gray-500">Total Flags</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    {shopkeeperStats?.totalOrders || 0}
+                    {shopkeeperStats?.totalFlags || 0}
                   </p>
                 </div>
               </div>
@@ -198,9 +196,9 @@ const Dashboard: React.FC = () => {
                   <TrendingUp className="h-8 w-8 text-success-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Spent</p>
+                  <p className="text-sm font-medium text-gray-500">Total Quantity Bought</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    ৳{shopkeeperStats?.totalSpent?.toLocaleString() || 0}
+                    {shopkeeperStats?.summary?.totalQuantityBought?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
@@ -212,9 +210,9 @@ const Dashboard: React.FC = () => {
                   <Package className="h-8 w-8 text-warning-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Completed Orders</p>
+                  <p className="text-sm font-medium text-gray-500">Total Quantity Sold</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    {shopkeeperStats?.completedOrders || 0}
+                    {shopkeeperStats?.summary?.totalQuantitySold?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
@@ -226,9 +224,9 @@ const Dashboard: React.FC = () => {
                   <TrendingUp className="h-8 w-8 text-info-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Avg Order Value</p>
+                  <p className="text-sm font-medium text-gray-500">Avg Loss %</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    ৳{shopkeeperStats?.averageOrderValue?.toFixed(0) || 0}
+                    {shopkeeperStats?.summary?.avgLossPercentage?.toFixed(1) || 0}%
                   </p>
                 </div>
               </div>
@@ -244,9 +242,9 @@ const Dashboard: React.FC = () => {
                   <ShoppingCart className="h-8 w-8 text-primary-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Orders</p>
+                  <p className="text-sm font-medium text-gray-500">Total Products</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    {companyStats?.totalOrders || 0}
+                    {companyStats?.summary?.totalProducts || 0}
                   </p>
                 </div>
               </div>
@@ -258,9 +256,9 @@ const Dashboard: React.FC = () => {
                   <TrendingUp className="h-8 w-8 text-success-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+                  <p className="text-sm font-medium text-gray-500">Total Quantity Bought</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    ৳{companyStats?.totalRevenue?.toLocaleString() || 0}
+                    {companyStats?.summary?.totalQuantityBought?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
@@ -272,9 +270,9 @@ const Dashboard: React.FC = () => {
                   <Truck className="h-8 w-8 text-warning-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Deliveries</p>
+                  <p className="text-sm font-medium text-gray-500">Total Quantity Sold</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    {companyStats?.totalDeliveries || 0}
+                    {companyStats?.summary?.totalQuantitySold?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
@@ -286,9 +284,9 @@ const Dashboard: React.FC = () => {
                   <TrendingUp className="h-8 w-8 text-info-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Success Rate</p>
+                  <p className="text-sm font-medium text-gray-500">Avg Loss %</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    {companyStats?.deliverySuccessRate?.toFixed(1) || 0}%
+                    {companyStats?.summary?.avgLossPercentage?.toFixed(1) || 0}%
                   </p>
                 </div>
               </div>

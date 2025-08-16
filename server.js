@@ -44,13 +44,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery-track-bd', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+// server.js (top of file)
+
+require('dotenv').config();
+
+
+const uri = process.env.MONGO_URI;
+
+mongoose.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
-.then(() => console.log('Connected to MongoDB'))
+.then(() => console.log('MongoDB connected successfully!'))
 .catch(err => console.error('MongoDB connection error:', err));
+
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -86,18 +86,33 @@ const OrderDetails: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = async (newStatus: string) => {
-    try {
-      setUpdating(true);
-      await ordersAPI.updateOrderStatus(orderNumber!, newStatus);
-      toast.success('Order status updated successfully');
-      fetchOrderDetails();
-    } catch (error) {
-      toast.error('Failed to update order status');
-    } finally {
-      setUpdating(false);
+const handleStatusUpdate = async (newStatus: string) => {
+  try {
+    setUpdating(true);
+
+    let payload: any = { status: newStatus };
+
+    // Only for cancel
+    if (newStatus === 'cancelled') {
+      const reason = prompt('Enter cancellation reason:');
+      if (!reason) {
+        setUpdating(false);
+        return;
+      }
+      payload.rejectionReason = reason;
     }
-  };
+
+    await ordersAPI.updateOrderStatus(orderNumber!, payload); // send object, not string
+    toast.success(newStatus === 'cancelled' ? 'Order cancelled successfully' : 'Order updated');
+    fetchOrderDetails();
+  } catch (err: any) {
+    console.error('Update status error:', err);
+    toast.error(err.response?.data?.error || 'Failed to update order status');
+  } finally {
+    setUpdating(false);
+  }
+};
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

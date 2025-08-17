@@ -285,32 +285,36 @@ exports.createOrder = async (req, res) => {
     res.status(500).json({ error: 'Failed to create order' });
   }
 };
-
-// Update order status
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { status, rejectionReason, assignedDeliveryWorkerId } = req.body;
+    const { status: requestedStatus, rejectionReason, assignedDeliveryWorkerId } = req.body;
 
-    // Find order
+    const status = typeof requestedStatus === 'string' ? requestedStatus : requestedStatus?.status;
+
     let order;
     if (/^[0-9a-fA-F]{24}$/.test(orderId)) order = await Order.findById(orderId);
     else order = await Order.findOne({ orderNumber: orderId });
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    // Role-based status update permissions
-    const canUpdate = 
-      (req.user.role === 'admin') ||
+    // Role-based permissions with status check
+    const canUpdate =
+      req.user.role === 'admin' ||
       (req.user.role === 'company_rep' && order.companyId.toString() === req.user._id.toString()) ||
-      (req.user.role === 'shopkeeper' && order.shopkeeperId.toString() === req.user._id.toString() && ['cancelled'].includes(status)) ||
-      (req.user.role === 'delivery_worker' && order.deliveryWorkerId && order.deliveryWorkerId.toString() === req.user._id.toString());
+      (req.user.role === 'shopkeeper' &&
+        order.shopkeeperId.toString() === req.user._id.toString() &&
+        status === 'cancelled' &&
+        order.status === 'pending') || // <-- shopkeepers can cancel **only if pending**
+      (req.user.role === 'delivery_worker' &&
+        order.deliveryWorkerId &&
+        order.deliveryWorkerId.toString() === req.user._id.toString());
 
     if (!canUpdate) {
       return res.status(403).json({ error: 'Not authorized to update this order' });
     }
 
-    // Validate status transitions
+    // Status transitions
     const validTransitions = {
       pending: ['approved', 'rejected', 'cancelled'],
       approved: ['assigned', 'cancelled'],
@@ -326,7 +330,7 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(400).json({ error: `Cannot change status from ${order.status} to ${status}` });
     }
 
-    // Handle delivery worker assignment
+    // Assign delivery worker if needed
     if (status === 'assigned' && assignedDeliveryWorkerId) {
       const worker = await User.findById(assignedDeliveryWorkerId);
       if (!worker || worker.role !== 'delivery_worker') {
@@ -335,18 +339,17 @@ exports.updateOrderStatus = async (req, res) => {
       order.deliveryWorkerId = assignedDeliveryWorkerId;
     }
 
-    // Update order
     order.status = status;
-    
+
     if (status === 'rejected' || status === 'cancelled') {
       order.rejectionReason = rejectionReason || '';
     }
 
-    if (status === 'delivered') {
-      order.deliveredAt = new Date();
-    }
+    if (status === 'delivered') order.deliveredAt = new Date();
 
-    // Add to timeline
+    // Ensure timeline array exists
+    if (!Array.isArray(order.timeline)) order.timeline = [];
+
     order.timeline.push({
       status,
       timestamp: new Date(),

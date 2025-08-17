@@ -30,7 +30,7 @@ async function seedProducts() {
     products.push({
       name: faker.commerce.productName(),
       description: faker.commerce.productDescription(),
-      companyId: new mongoose.Types.ObjectId("68a061f67ecbfb09273526cf"),
+      companyId: new mongoose.Types.ObjectId("68a05f51c6b9a46d2c6a1397"),
       category,
       unitPrice: parseFloat(faker.commerce.price({ min: 1, max: 100, dec: 2 })),
       unit,

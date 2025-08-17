@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { profileAPI, productsAPI, flagsAPI } from '../services/api';
+import { productsAPI, flagsAPI } from '../services/api';
 
 interface FlagFormData {
   companyId: string;
@@ -23,6 +23,8 @@ interface Company {
 interface Product {
   _id: string;
   name: string;
+  companyId?: any;
+  companyID?: string;
 }
 
 interface PersistedFlag {
@@ -41,6 +43,7 @@ const Flags: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [flags, setFlags] = useState<PersistedFlag[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [companySearch, setCompanySearch] = useState('');
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
@@ -53,27 +56,122 @@ const Flags: React.FC = () => {
     },
   });
 
-  // Fetch companies and my flags on mount
+  // Normalize company id from various shapes in products
+  const getCompanyIdFromProduct = (p: any): string => {
+    const cid = p?.companyID ?? p?.companyId;
+    if (!cid) return '';
+    if (typeof cid === 'string') return cid;
+    if (typeof cid === 'object') {
+      if (cid.$oid) return String(cid.$oid);
+      if (cid._id) return String(cid._id);
+      if (cid.id) return String(cid.id);
+      // When populated, cid may itself be the id string
+      return String(cid);
+    }
+    return '';
+  };
+
+  // Fetch companies (derived from products) and my flags on mount
   useEffect(() => {
-    profileAPI.getUsersByRole('company_rep').then(res => {
-      const data = Array.isArray(res.data) ? res.data : (res.data && Array.isArray(res.data.users) ? res.data.users : []);
-      setCompanies(data);
-    });
+    const fetchCompaniesFromProducts = async () => {
+      const uniqueCompanies = new Map<string, Company>();
+      let page = 1;
+      const limit = 100;
+      // Loop through pages until no next page
+      // Backend caps limit at 100
+      // Stop if pagination is missing to avoid infinite loop
+      while (true) {
+        const res = await productsAPI.getProducts({ page, limit });
+        const data = res.data;
+        const productList = Array.isArray(data)
+          ? data
+          : (data && Array.isArray(data.products) ? data.products : []);
+        for (const p of productList) {
+          const id = getCompanyIdFromProduct(p);
+          if (!id) continue;
+
+          let companyName = 'Company';
+          const populatedCompany = p?.companyId;
+          if (populatedCompany && typeof populatedCompany === 'object' && (populatedCompany.name || populatedCompany.companyInfo)) {
+            companyName = (populatedCompany.companyInfo && populatedCompany.companyInfo.companyName) || populatedCompany.name || 'Company';
+          }
+
+          if (!uniqueCompanies.has(id)) {
+            uniqueCompanies.set(id, {
+              _id: id,
+              name: companyName,
+              email: '',
+              companyInfo: { companyName: companyName || `Company ${id.slice(0,6)}` }
+            });
+          }
+        }
+        const pagination = data && data.pagination;
+        if (!pagination || !pagination.hasNextPage) break;
+        page += 1;
+      }
+      // Store all fetched products for client-side filtering by companyID/companyId
+      setAllProducts(prev => {
+        // Avoid duplicates by _id
+        const byId = new Map<string, Product>();
+        for (const p of prev.concat([])) byId.set(p._id, p);
+        // Add latest page results
+        // We refetch above in pages; to keep it simple, just return unique set collected from uniqueCompanies loop
+        // Instead, re-fetch a combined list in a second pass
+        return prev; // will set after loop below
+      });
+      setCompanies(Array.from(uniqueCompanies.values()));
+    };
+
+    fetchCompaniesFromProducts().catch(() => setCompanies([]));
     flagsAPI.getMyFlags().then(res => setFlags(res.data || [])).catch(() => setFlags([]));
+  }, []);
+
+  // Fetch and store all products for client-side filtering by company
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      let page = 1;
+      const limit = 100;
+      const collected: Product[] = [];
+      while (true) {
+        const res = await productsAPI.getProducts({ page, limit });
+        const data = res.data;
+        const productList: Product[] = Array.isArray(data)
+          ? data
+          : (data && Array.isArray(data.products) ? data.products : []);
+        collected.push(...productList);
+        const pagination = data && data.pagination;
+        if (!pagination || !pagination.hasNextPage) break;
+        page += 1;
+      }
+      // Deduplicate by _id
+      const map = new Map<string, Product>();
+      for (const p of collected) map.set(p._id, p);
+      setAllProducts(Array.from(map.values()));
+    };
+    fetchAllProducts().catch(() => setAllProducts([]));
   }, []);
 
   // Fetch products when company changes
   const selectedCompanyId = watch('companyId');
   useEffect(() => {
     if (selectedCompanyId) {
-      productsAPI.getProducts({ companyId: selectedCompanyId }).then(res => {
-        setProducts(res.data || []);
-      });
+      const filtered = allProducts.filter((p: any) => getCompanyIdFromProduct(p) === String(selectedCompanyId));
+      if (filtered.length > 0) {
+        setProducts(filtered);
+      } else {
+        // Fallback: fetch from API using companyId param
+        productsAPI.getProducts({ companyId: selectedCompanyId }).then(res => {
+          const data = Array.isArray(res.data)
+            ? res.data
+            : (res.data && Array.isArray(res.data.products) ? res.data.products : []);
+          setProducts(data);
+        }).catch(() => setProducts([]));
+      }
     } else {
       setProducts([]);
     }
     setValue('productId', '');
-  }, [selectedCompanyId, setValue]);
+  }, [selectedCompanyId, setValue, allProducts]);
 
   // Clear company search when company is selected
   useEffect(() => {

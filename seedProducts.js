@@ -3,7 +3,9 @@ const Product = require('./models/Product'); // relative path
 const { faker } = require('@faker-js/faker');
 
 async function seedProducts() {
-  await mongoose.connect('mongodb://localhost:27017/grocery-track-bd', {
+  require('dotenv').config();
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery-track-bd';
+  await mongoose.connect(mongoUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });

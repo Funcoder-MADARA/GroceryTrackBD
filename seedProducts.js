@@ -10,28 +10,38 @@ async function seedProducts() {
 
   await Product.deleteMany({}); // clear old
 
-  const categories = ['groceries', 'beverages', 'snacks', 'household', 'personal_care', 'frozen_foods', 'dairy', 'bakery', 'others'];
-  const units = ['kg', 'gram', 'liter', 'ml', 'piece', 'pack', 'dozen', 'bottle', 'can', 'box'];
-  const weightUnits = ['kg', 'gram', 'liter', 'ml'];
+  const categories = [
+    'dairy', 'meat', 'seafood', 'fruits', 'vegetables',
+    'grains', 'bakery', 'beverages', 'snacks',
+    'frozen', 'canned', 'condiments', 'other'
+  ];
+
+  // ✅ Match schema enum exactly
+  const units = ['piece', 'kg', 'liter', 'box', 'pack', 'dozen'];
 
   const products = [];
 
   for (let i = 0; i < 30; i++) {
     const category = faker.helpers.arrayElement(categories);
     const unit = faker.helpers.arrayElement(units);
-    const weightUnit = faker.helpers.arrayElement(weightUnits);
 
     products.push({
       name: faker.commerce.productName(),
       description: faker.commerce.productDescription(),
-      companyId: new mongoose.Types.ObjectId("689887fa0f48b8187ad706ea"), // ensure ObjectId type
+      companyId: new mongoose.Types.ObjectId("68a061f67ecbfb09273526cf"),
       category,
-      unitPrice: parseFloat(faker.commerce.price({ min: 1, max: 100, dec: 2 })), // Changed from 'price' to 'unitPrice'
+      unitPrice: parseFloat(faker.commerce.price({ min: 1, max: 100, dec: 2 })),
       unit,
       stockQuantity: faker.number.int({ min: 10, max: 100 }),
       minOrderQuantity: faker.number.int({ min: 1, max: 5 }),
       brand: faker.company.name(),
-      images: [faker.image.urlLoremFlickr({ category: 'food', width: 640, height: 480 })],
+      images: [
+        faker.image.urlLoremFlickr({
+          category: 'food',
+          width: 640,
+          height: 480
+        })
+      ],
       isActive: true,
       expiryDate: faker.date.soon({ days: 365 }),
       manufacturingDate: faker.date.past({ years: 1 }),
@@ -40,7 +50,7 @@ async function seedProducts() {
   }
 
   await Product.insertMany(products);
-  console.log('✅ 30 products inserted!');
+  console.log('✅ 30 products inserted successfully!');
   await mongoose.disconnect();
 }
 

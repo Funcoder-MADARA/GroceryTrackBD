@@ -1,6 +1,8 @@
 const Analytics = require('../models/Analytics');
 const Flag = require('../models/Flag');
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
+
 
 class AnalyticsService {
   /**
@@ -247,7 +249,7 @@ class AnalyticsService {
       const summary = await Analytics.aggregate([
         {
           $match: {
-            companyId: new require('mongoose').Types.ObjectId(companyId),
+            companyId: new mongoose.Types.ObjectId(companyId),
             period,
             startDate: { $gte: startDate, $lte: endDate }
           }
@@ -335,7 +337,7 @@ class AnalyticsService {
       const riskData = await Analytics.aggregate([
         {
           $match: {
-            companyId: new require('mongoose').Types.ObjectId(companyId),
+            companyId: new mongoose.Types.ObjectId(companyId),
             period: 'monthly'
           }
         },

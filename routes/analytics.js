@@ -4,6 +4,8 @@ const Analytics = require('../models/Analytics');
 const AnalyticsService = require('../services/analyticsService');
 const { authenticateToken, authorizeShopkeeper } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validation');
+const mongoose = require('mongoose');
+
 
 // Get company performance summary
 router.get('/company/:companyId/summary', authenticateToken, async (req, res) => {
@@ -249,7 +251,7 @@ router.get('/company/:companyId/performance', authenticateToken, async (req, res
     const performance = await Analytics.aggregate([
       {
         $match: {
-          companyId: new require('mongoose').Types.ObjectId(companyId),
+          companyId: new mongoose.Types.ObjectId(companyId),
           period,
           startDate: { $gte: startDate, $lte: endDate }
         }
@@ -315,27 +317,27 @@ router.get('/dashboard/:companyId', authenticateToken, async (req, res) => {
     const { companyId } = req.params;
     
     // Get multiple analytics in parallel
-    const [summary, riskData, performance] = await Promise.all([
-      AnalyticsService.getCompanyPerformanceSummary(companyId, 'monthly', 12),
-      AnalyticsService.getCompanyRiskAssessment(companyId),
-      Analytics.aggregate([
-        {
-          $match: {
-            companyId: new require('mongoose').Types.ObjectId(companyId),
-            period: 'monthly'
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            totalProducts: { $addToSet: '$productId' },
-            avgLossPercentage: { $avg: '$totalLossPercentage' },
-            avgSellThroughRate: { $avg: '$sellThroughRate' }
-          }
-        }
-      ])
-    ]);
-    
+const [summary, riskData, performance] = await Promise.all([
+  AnalyticsService.getCompanyPerformanceSummary(companyId, 'monthly', 12),
+  AnalyticsService.getCompanyRiskAssessment(companyId),
+  Analytics.aggregate([
+    {
+      $match: {
+        companyId: new mongoose.Types.ObjectId(companyId),
+        period: 'monthly'
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalProducts: { $addToSet: '$productId' },
+        avgLossPercentage: { $avg: '$totalLossPercentage' },
+        avgSellThroughRate: { $avg: '$sellThroughRate' }
+      }
+    }
+  ])
+]);
+
     const dashboardData = {
       summary: summary || {
         totalProducts: 0,

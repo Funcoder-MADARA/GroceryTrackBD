@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ordersAPI, profileAPI, productsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import { generateOrderPDF, OrderPDFData } from '../../utils/pdfGenerator';
 
 interface Company {
   _id: string;
   name: string;
+  email?: string;
+  phone?: string;
   companyInfo?: {
     companyName: string;
   };
@@ -49,7 +52,7 @@ const CreateOrder: React.FC = () => {
     deliveryArea: user?.area || '',
     deliveryAddress: user?.address || '',
     deliveryCity: user?.city || '',
-    paymentMethod: 'cash',
+    paymentMethod: 'cash_on_delivery',
     preferredDeliveryDate: '',
     deliveryInstructions: '',
     notes: ''
@@ -129,16 +132,61 @@ const CreateOrder: React.FC = () => {
     setItems(newItems);
   };
 
+  // Stock validation function
+  const validateStock = () => {
+    const validationErrors: string[] = [];
+    
+    for (const item of items) {
+      if (!item.productId || !item.productName) {
+        validationErrors.push(`Please select a product for all order items`);
+        continue;
+      }
+      
+      const product = products.find(p => p._id === item.productId);
+      if (!product) {
+        validationErrors.push(`Product "${item.productName}" not found`);
+        continue;
+      }
+      
+      // Check if product is in stock
+      if (!product.inStock) {
+        validationErrors.push(`Product "${product.name}" is out of stock`);
+        continue;
+      }
+      
+      // Check if requested quantity exceeds available stock
+      if (item.quantity > product.stockQuantity) {
+        validationErrors.push(`Quantity for "${product.name}" (${item.quantity}) exceeds available stock (${product.stockQuantity})`);
+        continue;
+      }
+      
+      // Check minimum order quantity
+      const minOrderQty = product.minOrderQuantity || 1;
+      if (item.quantity < minOrderQty) {
+        validationErrors.push(`Quantity for "${product.name}" (${item.quantity}) is below minimum order quantity (${minOrderQty})`);
+        continue;
+      }
+      
+      // Check maximum order quantity if defined
+      if (product.maxOrderQuantity && item.quantity > product.maxOrderQuantity) {
+        validationErrors.push(`Quantity for "${product.name}" (${item.quantity}) exceeds maximum order quantity (${product.maxOrderQuantity})`);
+        continue;
+      }
+    }
+    
+    return validationErrors;
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Validate that all items have productId
-      const invalidItems = items.filter(item => !item.productId || !item.productName);
-      if (invalidItems.length > 0) {
-        toast.error('Please select products for all order items');
+      // Validate stock before submission
+      const validationErrors = validateStock();
+      if (validationErrors.length > 0) {
+        validationErrors.forEach(error => toast.error(error));
         setLoading(false);
         return;
       }
@@ -151,7 +199,63 @@ const CreateOrder: React.FC = () => {
 
       console.log('Submitting order data:', orderData); // Debug log
       const response = await ordersAPI.createOrder(orderData);
-      toast.success('Order created successfully!');
+      
+      // Generate PDF transcript
+      const selectedCompanyData = companies.find(c => c._id === selectedCompany);
+      const totals = calculateTotals();
+      
+      const pdfData: OrderPDFData = {
+        orderNumber: response.data.order.orderNumber,
+        createdAt: response.data.order.createdAt || new Date().toISOString(),
+        status: response.data.order.status || 'pending',
+        totalAmount: totals.final,
+        shopkeeper: {
+          name: user?.name || '',
+          shopName: (user as any)?.shopName,
+          email: user?.email,
+          phone: (user as any)?.phone,
+          area: (user as any)?.area,
+          address: (user as any)?.address,
+          city: (user as any)?.city
+        },
+        company: {
+          name: selectedCompanyData?.name || '',
+          companyName: selectedCompanyData?.companyInfo?.companyName,
+          email: selectedCompanyData?.email,
+          phone: selectedCompanyData?.phone
+        },
+        items: items.map(item => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          unit: item.unit,
+          totalPrice: item.quantity * item.unitPrice
+        })),
+        deliveryDetails: {
+          deliveryArea: orderDetails.deliveryArea,
+          deliveryAddress: orderDetails.deliveryAddress,
+          deliveryCity: orderDetails.deliveryCity,
+          paymentMethod: orderDetails.paymentMethod,
+          preferredDeliveryDate: orderDetails.preferredDeliveryDate,
+          deliveryInstructions: orderDetails.deliveryInstructions
+        },
+        pricing: {
+          subtotal: totals.subtotal,
+          tax: totals.tax,
+          delivery: totals.delivery,
+          total: totals.final
+        }
+      };
+      
+      // Generate and download PDF
+      try {
+        generateOrderPDF(pdfData);
+        toast.success('Order created successfully! PDF transcript downloaded.');
+      } catch (pdfError) {
+        console.error('PDF generation error:', pdfError);
+        toast.success('Order created successfully! (PDF generation failed)');
+      }
+      
       navigate(`/orders/${response.data.order.orderNumber}`);
     } catch (error: any) {
       console.error('Order creation error:', error);
@@ -325,7 +429,7 @@ const CreateOrder: React.FC = () => {
               className="p-2 border rounded"
               required
             >
-              <option value="cash">Cash</option>
+              <option value="cash_on_delivery">Cash on Delivery</option>
               <option value="bank_transfer">Bank Transfer</option>
               <option value="mobile_banking">Mobile Banking</option>
             </select>

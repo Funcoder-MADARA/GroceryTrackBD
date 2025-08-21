@@ -111,7 +111,7 @@ const deliverySchema = new mongoose.Schema({
   // Payment Information
   paymentMethod: {
     type: String,
-    enum: ['cash_on_delivery', 'prepaid'],
+    enum: ['mobile_banking', 'bank_transfer', 'cash_on_delivery'],
     required: true
   },
   amountToCollect: {
@@ -128,7 +128,15 @@ const deliverySchema = new mongoose.Schema({
   issues: [{
     type: {
       type: String,
-      enum: ['damaged_goods', 'wrong_items', 'customer_unavailable', 'address_incorrect', 'other']
+      enum: [ 'Customer not available',
+    'Wrong address',
+    'Address not found',
+    'Customer refused delivery',
+    'Product damaged',
+    'Vehicle breakdown',
+    'Weather conditions',
+    'Security concerns',
+    'Other']
     },
     description: String,
     reportedAt: {

@@ -463,7 +463,7 @@ const Flags: React.FC = () => {
           <div className="space-y-4">
             {flags.map((flag) => {
               const companyName = typeof flag.companyId === 'object' ? flag.companyId.companyInfo?.companyName : '';
-              const productName = typeof flag.productId === 'object' ? flag.productId.name : '';
+              const productName = (typeof flag.productId === 'object' && flag.productId !== null) ? flag.productId.name : '';
               return (
                 <div key={flag._id} className="p-4 border rounded bg-white">
                   <div className="font-bold">{companyName || 'Company'}</div>

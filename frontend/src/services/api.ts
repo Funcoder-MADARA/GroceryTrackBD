@@ -152,6 +152,18 @@ export const deliveriesAPI = {
   completeDelivery: (deliveryId: string, proof: any) =>
     api.put(`/delivery/${deliveryId}/complete`, proof),
   
+  reportDeliveryIssue: (deliveryId: string, issueData: any) =>
+    api.put(`/delivery/${deliveryId}/report-issue`, issueData),
+  
+  assignDeliveryWorker: (orderId: string, deliveryWorkerId: string) =>
+    api.post('/delivery', { orderId, deliveryWorkerId }),
+  
+  getAvailableWorkersByArea: (area: string) =>
+    api.get(`/delivery/workers/available/${area}`),
+  
+  getAllAvailableWorkers: () =>
+    api.get('/delivery/workers/all'),
+  
   getAvailableWorkers: (area: string) =>
     api.get(`/delivery/workers/available/${area}`),
   

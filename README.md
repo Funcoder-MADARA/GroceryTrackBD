@@ -305,6 +305,62 @@ For support and questions, please contact:
 
 ## 📋 Changelog
 
+### Changelog for 21st August 2025
+
+#### 🚀 New Features
+- **Complete Delivery Worker Assignment System**: Implemented full delivery worker assignment flow from order to delivery creation
+- **Area-based Worker Selection**: Added intelligent worker filtering based on delivery area for optimal assignments
+- **Enhanced Delivery Completion**: Replaced URL input with native file upload system for delivery proof photos
+- **Multi-format Image Support**: Added support for JPEG, PNG, GIF, and WebP image formats for delivery proof
+- **Comprehensive Issue Reporting**: Enhanced delivery issue reporting with resolution tracking and status updates
+- **Smart Notification System**: Automated notifications to shopkeepers and companies on delivery events
+
+#### 🏗️ Architecture Changes
+- **Enhanced Delivery Routes**: Expanded delivery API endpoints for worker assignment and management
+- **Improved Order-Delivery Flow**: Seamless integration between order assignment and delivery creation
+- **Notification Integration**: Added delivery event notifications to shopkeepers and companies
+- **Worker Availability System**: Implemented area-based worker filtering and availability tracking
+
+#### 🔧 Technical Improvements
+- **Delivery Worker Assignment**: Complete backend implementation for assigning workers to orders
+- **File Upload Handling**: Added comprehensive file type and size validation for delivery photos
+- **Base64 Conversion**: Automatic conversion of uploaded images to base64 for backend storage
+- **Enhanced Error Handling**: Detailed error logging and user-friendly error messages
+- **Data Validation**: Fixed missing required fields in delivery creation (paymentMethod, amountToCollect)
+- **API Service Updates**: Enhanced frontend API services for delivery worker management
+
+#### 🎨 UI/UX Enhancements
+- **Modern Upload Interface**: Beautiful dashed border upload area with camera icon for delivery photos
+- **Interactive Elements**: Add/remove photo functionality with visual feedback
+- **File Information Display**: Shows file name, size, and format details
+- **Mobile Optimization**: Optimized for both desktop and mobile device usage
+- **Enhanced Worker Selection**: Comprehensive modal for selecting delivery workers with area and vehicle info
+- **Responsive Image Preview**: Mobile-friendly image preview with aspect ratio preservation
+
+#### 📁 Files Modified
+- `frontend/src/pages/delivery/Deliveries.tsx` - Enhanced delivery completion modal with image upload
+- `frontend/src/pages/orders/OrderDetails.tsx` - Added comprehensive delivery worker assignment modal
+- `frontend/src/services/api.ts` - Enhanced deliveries API with worker assignment and issue reporting
+- `GroceryTrackBD/routes/delivery.js` - Implemented complete delivery worker assignment system
+- `GroceryTrackBD/README.md` - Updated documentation with today's changes
+
+#### 🔒 Backend Compatibility
+- **Existing API Support**: Backend already supports base64 image storage in `deliveryProof.photo` field
+- **Enhanced Delivery System**: Complete delivery worker assignment and management workflow
+- **Notification System**: Automated notifications for delivery events (assigned, completed, issues)
+- **Data Integrity**: Maintains existing delivery proof structure while enhancing user experience
+
+#### 🐛 Bug Fixes
+- **Fixed Delivery Worker Assignment**: Resolved "Failed to update order status" error during worker assignment
+- **Corrected Property Names**: Fixed `_id` vs `id` property mismatch between frontend and backend
+- **Added Required Fields**: Fixed "paymentMethod required" validation error in delivery creation
+- **Enhanced Error Logging**: Added detailed error logging for better debugging and user feedback
+
+#### 🧪 Testing & Development
+- **Created Test Data**: Added `seedDeliveryTest.js` script for testing delivery features
+- **Enhanced Error Handling**: Improved error messages and validation feedback
+- **Comprehensive Testing**: Tested complete workflow from assignment to completion
+
 ### Changelog for 15th August 2025
 
 #### 🚀 New Features

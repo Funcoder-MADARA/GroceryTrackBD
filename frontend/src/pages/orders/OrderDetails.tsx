@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ordersAPI } from '../../services/api';
+import { ordersAPI, deliveriesAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 
@@ -22,7 +22,19 @@ interface TimelineEvent {
   };
 }
 
+interface DeliveryWorker {
+  _id: string;
+  name: string;
+  phone: string;
+  area: string;
+  availability: 'available' | 'busy' | 'offline';
+  assignedAreas: string[];
+  vehicleType: string;
+  vehicleNumber: string;
+}
+
 interface OrderDetails {
+  id: string;
   orderNumber: string;
   status: string;
   items: OrderItem[];
@@ -64,8 +76,10 @@ const OrderDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [showWorkerAssignment, setShowWorkerAssignment] = useState(false);
-  const [deliveryWorkers, setDeliveryWorkers] = useState<any[]>([]);
-  const [selectedWorker, setSelectedWorker] = useState('');
+  const [availableWorkers, setAvailableWorkers] = useState<DeliveryWorker[]>([]);
+  const [selectedWorker, setSelectedWorker] = useState<string>('');
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+  const [assigningWorker, setAssigningWorker] = useState(false);
 
   useEffect(() => {
     fetchOrderDetails();
@@ -111,6 +125,57 @@ const handleStatusUpdate = async (newStatus: string) => {
   } finally {
     setUpdating(false);
   }
+};
+
+const fetchAvailableWorkers = async () => {
+  try {
+    setLoadingWorkers(true);
+    // Get workers for the delivery area, or all workers if admin
+    const response = user?.role === 'admin' 
+      ? await deliveriesAPI.getAllAvailableWorkers()
+      : await deliveriesAPI.getAvailableWorkersByArea(order?.deliveryArea || 'all');
+    
+    setAvailableWorkers(response.data.workers || []);
+  } catch (error: any) {
+    console.error('Error fetching workers:', error);
+    toast.error('Failed to load available workers');
+  } finally {
+    setLoadingWorkers(false);
+  }
+};
+
+const handleAssignWorker = async () => {
+  if (!selectedWorker || !order) {
+    toast.error('Please select a delivery worker');
+    return;
+  }
+
+  try {
+    setAssigningWorker(true);
+    console.log('Assigning worker:', { orderId: order.id, workerId: selectedWorker });
+    
+    // Make sure we have a valid order ID
+    if (!order.id) {
+      throw new Error('Order ID is missing');
+    }
+    
+    await deliveriesAPI.assignDeliveryWorker(order.id, selectedWorker);
+    toast.success('Delivery worker assigned successfully!');
+    setShowWorkerAssignment(false);
+    setSelectedWorker('');
+    fetchOrderDetails();
+  } catch (error: any) {
+    console.error('Error assigning worker:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to assign delivery worker';
+    toast.error(errorMessage);
+  } finally {
+    setAssigningWorker(false);
+  }
+};
+
+const openWorkerAssignment = () => {
+  setShowWorkerAssignment(true);
+  fetchAvailableWorkers();
 };
 
 
@@ -338,7 +403,7 @@ const handleStatusUpdate = async (newStatus: string) => {
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 mb-2">Assign to delivery worker:</p>
                   <button
-                    onClick={() => setShowWorkerAssignment(true)}
+                    onClick={openWorkerAssignment}
                     disabled={updating}
                     className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                   >
@@ -442,34 +507,131 @@ const handleStatusUpdate = async (newStatus: string) => {
       
       {/* Worker Assignment Modal */}
       {showWorkerAssignment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold mb-4">Assign Delivery Worker</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              This will assign the order to a delivery worker and change status to 'assigned'.
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowWorkerAssignment(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    // For now, we'll just call the status update to 'assigned'
-                    // In a full implementation, you'd select a worker first
-                    await handleStatusUpdate('assigned');
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Assign Delivery Worker</h3>
+                <button
+                  onClick={() => {
                     setShowWorkerAssignment(false);
-                  } catch (error) {
-                    toast.error('Failed to assign delivery worker');
-                  }
-                }}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Assign
-              </button>
+                    setSelectedWorker('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded">
+                <p className="text-sm text-gray-600">Order: {order?.orderNumber}</p>
+                <p className="text-sm text-gray-600">Delivery Area: {order?.deliveryArea || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">Total Amount: ৳{order?.totalAmount.toFixed(2)}</p>
+              </div>
+
+              {loadingWorkers ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading available workers...</p>
+                </div>
+              ) : availableWorkers.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-4">No delivery workers available for this area.</p>
+                  <button
+                    onClick={fetchAvailableWorkers}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Available Workers ({availableWorkers.length})
+                  </h4>
+                  
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {availableWorkers.map((worker) => (
+                      <div
+                        key={worker._id}
+                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                          selectedWorker === worker._id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => setSelectedWorker(worker._id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center">
+                              <input
+                                type="radio"
+                                checked={selectedWorker === worker._id}
+                                onChange={() => setSelectedWorker(worker._id)}
+                                className="mr-3"
+                              />
+                              <div>
+                                <h5 className="font-medium text-gray-900">{worker.name}</h5>
+                                <p className="text-sm text-gray-600">{worker.phone}</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                worker.availability === 'available' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : worker.availability === 'busy'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {worker.availability}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500">Area: {worker.area}</p>
+                            <p className="text-xs text-gray-500">Vehicle: {worker.vehicleType}</p>
+                          </div>
+                        </div>
+                        
+                        {worker.assignedAreas.length > 1 && (
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-500">
+                              Covers: {worker.assignedAreas.join(', ')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {availableWorkers.length > 0 && (
+                <div className="flex gap-3 mt-6 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      setShowWorkerAssignment(false);
+                      setSelectedWorker('');
+                    }}
+                    disabled={assigningWorker}
+                    className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAssignWorker}
+                    disabled={!selectedWorker || assigningWorker}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+                  >
+                    {assigningWorker ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      'Assign Worker'
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

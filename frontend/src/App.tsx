@@ -7,7 +7,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import Homepage from './pages/Homepage';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Orders from './pages/orders/Orders';
@@ -37,7 +36,6 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<Homepage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
 

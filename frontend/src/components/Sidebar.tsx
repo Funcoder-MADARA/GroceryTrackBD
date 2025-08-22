@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePendingUsers } from '../hooks/usePendingUsers';
 import { X, User, Home, Package, Truck, BarChart3, Bell, Users, ShoppingCart, Flag } from 'lucide-react';
 
 interface SidebarProps {
@@ -11,6 +12,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const { pendingCount } = usePendingUsers();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
@@ -66,6 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
           {filteredNav.map(item => {
             const isActive = location.pathname === item.href;
+            const showBadge = item.name === 'Users' && pendingCount > 0;
+            
             return (
               <NavLink
                 key={item.name}
@@ -75,7 +79,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   ${isActive ? 'bg-primary-100 text-primary-900 border-r-2 border-primary-500' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
               >
                 <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'}`} />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
+                {showBadge && (
+                  <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                    {pendingCount}
+                  </span>
+                )}
               </NavLink>
             );
           })}

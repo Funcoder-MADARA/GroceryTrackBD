@@ -24,7 +24,10 @@ const notificationSchema = new mongoose.Schema({
       'payment_failed',
       'stock_low',
       'area_trend',
-      'system_alert'
+      'system_alert',
+      'user_registration',
+      'user_approved',
+      'user_rejected'
     ],
     required: [true, 'Notification type is required']
   },

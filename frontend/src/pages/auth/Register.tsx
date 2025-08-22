@@ -58,9 +58,15 @@ const Register: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await registerUser(data);
-      toast.success('Registration successful!');
-      navigate('/dashboard');
+      const result = await registerUser(data);
+      
+      if (result.requiresApproval) {
+        toast.success('Registration successful! Your account is pending admin approval.');
+        navigate(`/pending-approval?email=${encodeURIComponent(data.email)}`);
+      } else {
+        toast.success('Registration successful!');
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || 'Registration failed. Please try again.';
       toast.error(message);

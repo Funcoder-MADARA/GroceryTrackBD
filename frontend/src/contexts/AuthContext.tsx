@@ -38,11 +38,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
+  register: (userData: RegisterData) => Promise<{ requiresApproval: boolean }>;
   logout: () => void;
   isLoading: boolean;
   updateProfile: (data: Partial<User>) => Promise<void>;
   updateProfileImage: (profileImage: string) => Promise<void>;
+  checkApprovalStatus: (email: string) => Promise<{ status: string; message: string }>;
 }
 
 interface RegisterData {
@@ -130,7 +131,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: RegisterData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      const { user: userDataResponse, token: newToken } = response.data;
+      const { user: userDataResponse, token: newToken, requiresApproval } = response.data;
+      
+      if (requiresApproval) {
+        // Don't set user or token if approval is required
+        return { requiresApproval: true };
+      }
       
       setUser(userDataResponse);
       setToken(newToken);
@@ -138,6 +144,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Update API default headers
       api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      
+      return { requiresApproval: false };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const checkApprovalStatus = async (email: string) => {
+    try {
+      const response = await api.get(`/auth/check-approval/${email}`);
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -177,7 +194,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     isLoading,
     updateProfile,
-    updateProfileImage, // add to context
+    updateProfileImage,
+    checkApprovalStatus,
   };
 
   return (

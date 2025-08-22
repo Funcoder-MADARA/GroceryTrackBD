@@ -149,7 +149,7 @@ const Login: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link
@@ -157,6 +157,14 @@ const Login: React.FC = () => {
                 className="font-medium text-primary-600 hover:text-primary-500"
               >
                 Sign up here
+              </Link>
+            </p>
+            <p className="text-sm text-gray-500">
+              <Link
+                to="/pending-approval"
+                className="hover:text-gray-700"
+              >
+                Check approval status
               </Link>
             </p>
           </div>

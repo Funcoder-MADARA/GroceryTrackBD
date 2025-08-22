@@ -40,6 +40,12 @@ const userSchema = new mongoose.Schema({
     default: 'pending'
   },
   
+  // Suspension reason (for rejected users)
+  suspensionReason: {
+    type: String,
+    default: null
+  },
+  
   // Location Information
   area: {
     type: String,

@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { validateUserRegistration, validateUserLogin } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -96,9 +97,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     }
 
     // Create user object based on role
-    // TEMPORARY CHANGE: Automatically approve all new users by setting status to 'active'.
-    // The following block is commented out for now:
-    /*
+    // Create user object with pending status for admin approval
     const userData = {
       name,
       email,
@@ -108,22 +107,8 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       area,
       city,
       address,
-      // For regular users, default to inactive until approved
-      status: 'inactive'
-    };
-    */
-    // Use this instead (temporary):
-    const userData = {
-      name,
-      email,
-      phone,
-      password,
-      role,
-      area,
-      city,
-      address,
-      // TEMP: Automatically set to active for all new users
-      status: 'active'
+      // For regular users, default to pending until approved by admin
+      status: 'pending'
     };
 
     // Add role-specific information
@@ -138,17 +123,34 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     const user = new User(userData);
     await user.save();
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
-    );
+    // Create notification for admin about new user registration
+    try {
+      const admin = await User.findOne({ role: 'admin' });
+      if (admin) {
+        await Notification.create({
+          recipientId: admin._id,
+          type: 'user_registration',
+          title: 'New User Registration',
+          message: `A new ${role} user (${name}) has registered and is waiting for approval.`,
+          priority: 'medium',
+          data: {
+            userId: user._id,
+            userRole: role,
+            userName: name,
+            userEmail: email
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.error('Failed to create notification:', notificationError);
+      // Don't fail the registration if notification fails
+    }
 
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'User registered successfully. Your account is pending admin approval.',
       user: user.getPublicProfile(),
-      token
+      token: null, // No token for pending users
+      requiresApproval: true
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -172,8 +174,21 @@ router.post('/login', validateUserLogin, async (req, res) => {
       });
     }
     
-    // For non-admin users check for active status;
-    // allow admin login even if status isn't active.
+    // Check user status - only allow active users and admins to login
+    if (user.status === 'pending') {
+      return res.status(403).json({
+        error: 'Account pending approval',
+        message: 'Your account is pending admin approval. Please wait for approval before logging in.'
+      });
+    }
+    
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        error: 'Account suspended',
+        message: 'Your account has been suspended. Please contact support.'
+      });
+    }
+    
     if (user.role !== 'admin' && user.status !== 'active') {
       return res.status(403).json({
         error: 'Account not active',
@@ -355,6 +370,35 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
+// Admin-only route: Get pending users count
+router.get('/pending-users-count', authenticateToken, async (req, res) => {
+  try {
+    // Only allow access if logged in user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only admin can view pending users count'
+      });
+    }
+
+    // Count non-admin users with status "pending"
+    const pendingCount = await User.countDocuments({ 
+      status: 'pending',
+      role: { $ne: 'admin' }
+    });
+
+    res.json({
+      pendingCount
+    });
+  } catch (error) {
+    console.error('Error fetching pending users count:', error);
+    res.status(500).json({
+      error: 'Could not fetch pending users count',
+      message: 'An error occurred while fetching pending users count'
+    });
+  }
+});
+
 // Admin-only route: Get all pending users (waiting for approval)
 router.get('/pending-users', authenticateToken, async (req, res) => {
   try {
@@ -366,9 +410,9 @@ router.get('/pending-users', authenticateToken, async (req, res) => {
       });
     }
 
-    // Find non-admin users with status "inactive"
+    // Find non-admin users with status "pending"
     const pendingUsers = await User.find({ 
-      status: 'inactive',
+      status: 'pending',
       role: { $ne: 'admin' }
     }).select('-password'); // omit password field
 
@@ -384,6 +428,32 @@ router.get('/pending-users', authenticateToken, async (req, res) => {
     });
   }
 });
+// Route to check if user account is pending approval
+router.get('/check-approval/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const user = await User.findOne({ email }).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'No user found with this email'
+      });
+    }
+    
+    res.json({
+      status: user.status,
+      message: user.status === 'pending' ? 'Account is pending admin approval' : 'Account is active'
+    });
+  } catch (error) {
+    console.error('Check approval error:', error);
+    res.status(500).json({
+      error: 'Failed to check approval status',
+      message: 'An error occurred while checking approval status'
+    });
+  }
+});
+
 // Admin-only route: Approve a pending user (set status to 'active')
 router.patch('/approve-user/:userId', authenticateToken, async (req, res) => {
   try {
@@ -416,6 +486,23 @@ router.patch('/approve-user/:userId', authenticateToken, async (req, res) => {
     user.status = 'active';
     await user.save();
     
+    // Create notification for the approved user
+    try {
+      await Notification.create({
+        recipientId: user._id,
+        type: 'user_approved',
+        title: 'Account Approved',
+        message: 'Your account has been approved by the administrator. You can now log in to access your account.',
+        priority: 'high',
+        data: {
+          approvedBy: req.user._id,
+          approvedAt: new Date()
+        }
+      });
+    } catch (notificationError) {
+      console.error('Failed to create approval notification:', notificationError);
+    }
+    
     res.json({
       message: 'User approved successfully',
       user: user.getPublicProfile()
@@ -425,6 +512,197 @@ router.patch('/approve-user/:userId', authenticateToken, async (req, res) => {
     res.status(500).json({
       error: 'Approval failed',
       message: 'An error occurred while approving the user'
+    });
+  }
+});
+
+// Admin-only route: Get all users (for admin dashboard)
+router.get('/all-users', authenticateToken, async (req, res) => {
+  try {
+    // Only allow access if logged in user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only admin can view all users'
+      });
+    }
+
+    const { status, role, page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Build query
+    const query = { role: { $ne: 'admin' } };
+    if (status) query.status = status;
+    if (role) query.role = role;
+
+    // Get users with pagination
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count
+    const total = await User.countDocuments(query);
+
+    res.json({
+      users,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalUsers: total,
+        hasNext: skip + users.length < total,
+        hasPrev: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    res.status(500).json({
+      error: 'Could not fetch users',
+      message: 'An error occurred while fetching users'
+    });
+  }
+});
+
+// Admin-only route: Get user details by ID
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+  try {
+    // Only allow access if logged in user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only admin can view user details'
+      });
+    }
+
+    const { userId } = req.params;
+    const user = await User.findById(userId).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'No user exists with this id'
+      });
+    }
+
+    res.json({
+      user
+    });
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({
+      error: 'Could not fetch user details',
+      message: 'An error occurred while fetching user details'
+    });
+  }
+});
+
+// Admin-only route: Update user profile
+router.put('/user/:userId', authenticateToken, async (req, res) => {
+  try {
+    // Only allow access if logged in user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only admin can update user profiles'
+      });
+    }
+
+    const { userId } = req.params;
+    const updateData = req.body;
+
+    // Remove sensitive fields that shouldn't be updated via this route
+    delete updateData.password;
+    delete updateData.email; // Email should be updated through a separate process
+    delete updateData._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'No user exists with this id'
+      });
+    }
+
+    // Update user fields
+    Object.keys(updateData).forEach(key => {
+      if (user[key] !== undefined) {
+        user[key] = updateData[key];
+      }
+    });
+
+    await user.save();
+
+    res.json({
+      message: 'User profile updated successfully',
+      user: user.getPublicProfile()
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({
+      error: 'Could not update user profile',
+      message: 'An error occurred while updating user profile'
+    });
+  }
+});
+
+// Admin-only route: Reject/suspend a user
+router.patch('/reject-user/:userId', authenticateToken, async (req, res) => {
+  try {
+    // Only allow admins to perform this action
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only admin can perform this action'
+      });
+    }
+    
+    const { userId } = req.params;
+    const { reason } = req.body;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'No user exists with this id'
+      });
+    }
+    
+    user.status = 'suspended';
+    if (reason) {
+      user.suspensionReason = reason;
+    }
+    await user.save();
+    
+    // Create notification for the rejected user
+    try {
+      await Notification.create({
+        recipientId: user._id,
+        type: 'user_rejected',
+        title: 'Account Rejected',
+        message: reason 
+          ? `Your account registration has been rejected. Reason: ${reason}`
+          : 'Your account registration has been rejected by the administrator.',
+        priority: 'high',
+        data: {
+          rejectedBy: req.user._id,
+          rejectedAt: new Date(),
+          reason: reason
+        }
+      });
+    } catch (notificationError) {
+      console.error('Failed to create rejection notification:', notificationError);
+    }
+    
+    res.json({
+      message: 'User rejected/suspended successfully',
+      user: user.getPublicProfile()
+    });
+  } catch (error) {
+    console.error('Reject user error:', error);
+    res.status(500).json({
+      error: 'Rejection failed',
+      message: 'An error occurred while rejecting the user'
     });
   }
 });

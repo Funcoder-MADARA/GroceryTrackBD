@@ -2,8 +2,12 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import PendingApproval from './pages/auth/PendingApproval';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Orders from './pages/orders/Orders';
@@ -20,9 +24,6 @@ import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
 import Flags from './pages/Flags';
 import Users from './pages/admin/Users';
-import ProtectedRoute from './components/ProtectedRoute';
-import PendingApproval from './pages/auth/PendingApproval';
-
 
 const AppRoutes: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -36,52 +37,49 @@ const AppRoutes: React.FC = () => {
   }
 
   return (
-   <Routes>
-  {/* Public routes */}
-  <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-  <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-  <Route path="/pending-approval" element={<PendingApproval />} />
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+      <Route path="/pending-approval" element={<PendingApproval />} />
 
-  {/* Protected routes */}
-  <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-    <Route path="/dashboard" element={<Dashboard />} />
-    <Route path="/profile" element={<Profile />} />
-    <Route path="/orders" element={<Orders />} />
-    <Route path="/orders/create" element={<CreateOrder />} />
-    <Route path="/orders/history" element={<OrderHistory />} />
-    <Route path="/orders/:orderNumber" element={<OrderDetails />} />
-    <Route path="/products" element={<Products />} />
-    <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
-    <Route path="/products/company" element={<CompanyProductManagement />} />
-    <Route path="/products/:productId" element={<ProductDetails />} />
-    <Route path="/deliveries" element={<Deliveries />} />
-    <Route path="/deliveries/:deliveryId" element={<DeliveryDetails />} />
-    <Route path="/analytics" element={<Analytics />} />
-    <Route path="/notifications" element={<Notifications />} />
-    <Route path="/flags" element={<Flags />} />
-    <Route
-      path="/admin/users"
-      element={
-        <ProtectedRoute allowedRoles={['admin']}>
-          <Users />
-        </ProtectedRoute>
-      }
-    />
-  </Route>
+      {/* Protected routes */}
+      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/create" element={<CreateOrder />} />
+        <Route path="/orders/history" element={<OrderHistory />} />
+        <Route path="/orders/:orderNumber" element={<OrderDetails />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
+        <Route path="/products/company" element={<CompanyProductManagement />} />
+        <Route path="/products/:productId" element={<ProductDetails />} />
+        <Route path="/deliveries" element={<Deliveries />} />
+        <Route path="/deliveries/:deliveryId" element={<DeliveryDetails />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/flags" element={<Flags />} />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Users />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
 
-  {/* Catch all */}
-  <Route path="*" element={<Navigate to="/" />} />
-</Routes>
-
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 };
 
-const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
-  );
-};
+const App: React.FC = () => (
+  <AuthProvider>
+    <AppRoutes />
+  </AuthProvider>
+);
 
 export default App;

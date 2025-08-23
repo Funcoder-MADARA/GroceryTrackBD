@@ -21,6 +21,7 @@ import Notifications from './pages/Notifications';
 import Flags from './pages/Flags';
 import Users from './pages/admin/Users';
 import ProtectedRoute from './components/ProtectedRoute';
+import PendingApproval from './pages/auth/PendingApproval';
 
 
 const AppRoutes: React.FC = () => {
@@ -35,34 +36,43 @@ const AppRoutes: React.FC = () => {
   }
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-      {/* Protected routes */}
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/dashboard" />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="orders/create" element={<CreateOrder />} />
-        <Route path="orders/history" element={<OrderHistory />} />
-        <Route path="orders/:orderNumber" element={<OrderDetails />} />
-        <Route path="products" element={<Products />} />
-        <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
-        <Route path="/products/company" element={<CompanyProductManagement />} />
-        <Route path="products/:productId" element={<ProductDetails />} />
-        <Route path="deliveries" element={<Deliveries />} />
-        <Route path="deliveries/:deliveryId" element={<DeliveryDetails />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="flags" element={<Flags />} />
-        <Route path="admin/users" element={<ProtectedRoute allowedRoles={['admin']}><Users /></ProtectedRoute>} />
-        <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
-      </Route>
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/dashboard" />} />
-    </Routes>
+   <Routes>
+  {/* Public routes */}
+  <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+  <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+  <Route path="/pending-approval" element={<PendingApproval />} />
+
+  {/* Protected routes */}
+  <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/profile" element={<Profile />} />
+    <Route path="/orders" element={<Orders />} />
+    <Route path="/orders/create" element={<CreateOrder />} />
+    <Route path="/orders/history" element={<OrderHistory />} />
+    <Route path="/orders/:orderNumber" element={<OrderDetails />} />
+    <Route path="/products" element={<Products />} />
+    <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
+    <Route path="/products/company" element={<CompanyProductManagement />} />
+    <Route path="/products/:productId" element={<ProductDetails />} />
+    <Route path="/deliveries" element={<Deliveries />} />
+    <Route path="/deliveries/:deliveryId" element={<DeliveryDetails />} />
+    <Route path="/analytics" element={<Analytics />} />
+    <Route path="/notifications" element={<Notifications />} />
+    <Route path="/flags" element={<Flags />} />
+    <Route
+      path="/admin/users"
+      element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <Users />
+        </ProtectedRoute>
+      }
+    />
+  </Route>
+
+  {/* Catch all */}
+  <Route path="*" element={<Navigate to="/" />} />
+</Routes>
+
   );
 };
 

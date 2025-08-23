@@ -17,6 +17,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['shopkeeper', 'company_rep', 'admin'] },
     { name: 'Flags', href: '/flags', icon: Flag, roles: ['shopkeeper'] },
     { name: 'Products', href: '/products', icon: Package, roles: ['company_rep', 'admin'] },
+    { name: 'My Products', href: '/products/company', icon: Package, roles: ['company_rep'] },
+    { name: 'Shopkeeper Catalog', href: '/products/catalog', icon: Package, roles: ['shopkeeper'] },
     { name: 'Deliveries', href: '/deliveries', icon: Truck, roles: ['delivery_worker', 'company_rep', 'admin'] },
     { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['shopkeeper', 'company_rep', 'admin'] },
     { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },

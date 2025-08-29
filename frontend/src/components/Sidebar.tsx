@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePendingUsers } from '../hooks/usePendingUsers';
-import { X, User, Home, Package, Truck, BarChart3, Bell, Users, ShoppingCart, Flag, MapPin } from 'lucide-react';
+import { X, User, Home, Package, Truck, BarChart3, Bell, Users, ShoppingCart, Flag, MapPin, Clock } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
     { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['shopkeeper', 'company_rep', 'admin'] },
+    { name: 'Order History', href: '/orders/history', icon: Clock, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
     { name: 'Flags', href: '/flags', icon: Flag, roles: ['shopkeeper'] },
     { name: 'Products', href: '/products', icon: Package, roles: ['company_rep', 'admin'] },
     { name: 'Deliveries', href: '/deliveries', icon: Truck, roles: ['delivery_worker', 'company_rep', 'admin'] },

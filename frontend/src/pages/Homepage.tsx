@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 interface FeatureCardProps {
-  icon: React.ReactNode;
+  icon: React.ReactNode; 
   title: string;
   description: string;
   delay?: string;
@@ -177,7 +177,7 @@ const Homepage: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                GroceryTrackBD
+              GroceryTrackBD
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -196,7 +196,7 @@ const Homepage: React.FC = () => {
               >
                 Get Started
               </button>
-            </div>
+          </div>
           </div>
         </div>
       </nav>
@@ -210,7 +210,7 @@ const Homepage: React.FC = () => {
               <span className="block bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
                 Grocery Business
               </span>
-            </h1>
+          </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: "200ms" }}>
               The most advanced grocery supply chain management platform in Bangladesh. 
               Streamline operations, boost profits, and scale your business with AI-powered insights.
@@ -228,7 +228,7 @@ const Homepage: React.FC = () => {
               <button className="group flex items-center text-gray-700 hover:text-emerald-600 transition-colors">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md mr-3 group-hover:shadow-lg transition-shadow">
                   <Play className="h-5 w-5 text-emerald-600" />
-                </div>
+            </div>
                 Watch Demo
               </button>
             </div>
@@ -263,7 +263,7 @@ const Homepage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <FeatureCard
+            <FeatureCard
                 key={index}
                 icon={feature.icon}
                 title={feature.title}

@@ -672,6 +672,214 @@ router.get('/workers/all', authenticateToken, async (req, res) => {
   }
 });
 
+// Get delivery details grouped by area
+router.get('/details-by-area', authenticateToken, async (req, res) => {
+  try {
+    const { status, dateFrom, dateTo } = req.query;
+    
+    console.log('Delivery details request:', {
+      userRole: req.user.role,
+      userId: req.user._id,
+      filters: { status, dateFrom, dateTo }
+    });
+    
+    // Check permissions - allow admin, company_rep, and delivery_worker
+    if (!['admin', 'company_rep', 'delivery_worker'].includes(req.user.role)) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You do not have permission to view delivery details'
+      });
+    }
+
+    const query = {};
+    
+    // Role-based filtering
+    if (req.user.role === 'company_rep') {
+      query.companyId = req.user._id;
+    } else if (req.user.role === 'delivery_worker') {
+      query.deliveryWorkerId = req.user._id;
+    }
+    // Admin can see all deliveries
+    
+    if (status) query.status = status;
+    if (dateFrom || dateTo) {
+      query.assignedAt = {};
+      if (dateFrom) query.assignedAt.$gte = new Date(dateFrom);
+      if (dateTo) query.assignedAt.$lte = new Date(dateTo);
+    }
+
+    console.log('Query to execute:', query);
+
+    const deliveries = await Delivery.find(query)
+      .populate('orderId', 'orderNumber status totalAmount')
+      .populate('shopkeeperId', 'name phone area address')
+      .populate('companyId', 'name companyInfo.companyName address area')
+      .populate('deliveryWorkerId', 'name phone deliveryWorkerInfo.vehicleType deliveryWorkerInfo.vehicleNumber')
+      .populate('items.productId', 'name category')
+      .sort({ assignedAt: -1 });
+
+    console.log(`Found ${deliveries.length} deliveries`);
+
+    // If no deliveries found, return empty result
+    if (deliveries.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        statistics: {
+          totalAreas: 0,
+          totalDeliveries: 0,
+          completedDeliveries: 0,
+          pendingDeliveries: 0,
+          failedDeliveries: 0
+        },
+        filters: {
+          status,
+          dateFrom,
+          dateTo,
+          userRole: req.user.role
+        }
+      });
+    }
+
+    // Group deliveries by area
+    const deliveriesByArea = deliveries.reduce((acc, delivery) => {
+      const area = delivery.deliveryArea || 'Unknown Area';
+      
+      if (!acc[area]) {
+        acc[area] = {
+          area,
+          deliveries: [],
+          totalDeliveries: 0,
+          completedDeliveries: 0,
+          pendingDeliveries: 0,
+          failedDeliveries: 0
+        };
+      }
+      
+      const deliveryData = {
+        _id: delivery._id,
+        deliveryNumber: delivery.deliveryNumber,
+        status: delivery.status,
+        assignedAt: delivery.assignedAt,
+        deliveredAt: delivery.deliveredAt,
+        
+        // Order information
+        order: {
+          _id: delivery.orderId._id,
+          orderNumber: delivery.orderId.orderNumber,
+          status: delivery.orderId.status,
+          totalAmount: delivery.orderId.totalAmount
+        },
+        
+        // Product information
+        products: delivery.items.map(item => ({
+          _id: item.productId?._id,
+          name: item.productName || item.productId?.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          category: item.productId?.category
+        })),
+        
+        // Address and route information
+        addresses: {
+          pickup: delivery.pickupLocation,
+          delivery: delivery.deliveryLocation
+        },
+        
+        // Route information (if available)
+        route: delivery.routeOptimization ? {
+          distance: delivery.routeOptimization.distance,
+          estimatedTime: delivery.routeOptimization.estimatedTime,
+          routePoints: delivery.routeOptimization.routePoints
+        } : null,
+        
+        // Customer information
+        customer: {
+          _id: delivery.shopkeeperId._id,
+          name: delivery.shopkeeperId.name,
+          phone: delivery.shopkeeperId.phone,
+          area: delivery.shopkeeperId.area,
+          address: delivery.shopkeeperId.address
+        },
+        
+        // Company information
+        company: {
+          _id: delivery.companyId._id,
+          name: delivery.companyId.companyInfo?.companyName || delivery.companyId.name,
+          address: delivery.companyId.address,
+          area: delivery.companyId.area
+        },
+        
+        // Delivery worker information
+        deliveryWorker: {
+          _id: delivery.deliveryWorkerId._id,
+          name: delivery.deliveryWorkerId.name,
+          phone: delivery.deliveryWorkerId.phone,
+          vehicleType: delivery.deliveryWorkerId.deliveryWorkerInfo?.vehicleType,
+          vehicleNumber: delivery.deliveryWorkerId.deliveryWorkerInfo?.vehicleNumber
+        },
+        
+        // Payment and additional info
+        paymentMethod: delivery.paymentMethod,
+        amountToCollect: delivery.amountToCollect,
+        deliveryInstructions: delivery.deliveryInstructions,
+        issues: delivery.issues || []
+      };
+      
+      acc[area].deliveries.push(deliveryData);
+      acc[area].totalDeliveries++;
+      
+      switch (delivery.status) {
+        case 'delivered':
+          acc[area].completedDeliveries++;
+          break;
+        case 'failed':
+        case 'returned':
+          acc[area].failedDeliveries++;
+          break;
+        default:
+          acc[area].pendingDeliveries++;
+      }
+      
+      return acc;
+    }, {});
+
+    // Convert to array and sort by area name
+    const groupedDeliveries = Object.values(deliveriesByArea).sort((a, b) => 
+      a.area.localeCompare(b.area)
+    );
+
+    // Calculate overall statistics
+    const totalStats = {
+      totalAreas: groupedDeliveries.length,
+      totalDeliveries: deliveries.length,
+      completedDeliveries: deliveries.filter(d => d.status === 'delivered').length,
+      pendingDeliveries: deliveries.filter(d => !['delivered', 'failed', 'returned'].includes(d.status)).length,
+      failedDeliveries: deliveries.filter(d => ['failed', 'returned'].includes(d.status)).length
+    };
+
+    res.json({
+      success: true,
+      data: groupedDeliveries,
+      statistics: totalStats,
+      filters: {
+        status,
+        dateFrom,
+        dateTo,
+        userRole: req.user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Get delivery details by area error:', error);
+    res.status(500).json({
+      error: 'Failed to get delivery details',
+      message: 'An error occurred while fetching delivery details by area',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Get deliveries by area (for analytics)
 router.get('/area/:area', authenticateToken, validatePagination, async (req, res) => {
   try {

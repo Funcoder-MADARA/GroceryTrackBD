@@ -140,7 +140,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 >
                   <Settings className="h-4 w-4 mr-3" />
                   Analytics
-                </button>
+                               </button>
                 
                 <hr className="my-1" />
                 

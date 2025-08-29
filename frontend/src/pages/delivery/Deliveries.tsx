@@ -499,7 +499,16 @@ const Deliveries: React.FC = () => {
   const fetchDeliveries = async () => {
     try {
       setLoading(true);
-      const response = await deliveriesAPI.getWorkerDeliveries();
+      let response;
+      
+      if (user?.role === 'admin') {
+        // Admin sees all deliveries
+        response = await deliveriesAPI.getAllDeliveries();
+      } else {
+        // Delivery workers see only their assigned deliveries
+        response = await deliveriesAPI.getWorkerDeliveries();
+      }
+      
       setDeliveries(response.data.deliveries || []);
       setError(null);
     } catch (err: any) {
@@ -579,13 +588,13 @@ const Deliveries: React.FC = () => {
   const canMarkInTransit = (delivery: Delivery) => delivery.status === 'picked_up';
   const canComplete = (delivery: Delivery) => ['picked_up', 'in_transit'].includes(delivery.status);
 
-  if (user?.role !== 'delivery_worker') {
+  if (user?.role !== 'delivery_worker' && user?.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">This page is only accessible to delivery workers.</p>
+          <p className="text-gray-600">This page is only accessible to delivery workers and administrators.</p>
         </div>
       </div>
     );
@@ -623,15 +632,56 @@ const Deliveries: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Deliveries</h1>
-        <p className="text-gray-600">Manage your assigned deliveries and update their status</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {user?.role === 'admin' ? 'All Deliveries' : 'My Deliveries'}
+        </h1>
+        <p className="text-gray-600">
+          {user?.role === 'admin' 
+            ? 'Monitor and manage all deliveries across the system' 
+            : 'Manage your assigned deliveries and update their status'
+          }
+        </p>
+        
+        {user?.role === 'admin' && deliveries.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="text-2xl font-bold text-blue-600">
+                {deliveries.filter(d => d.status === 'assigned').length}
+              </div>
+              <div className="text-sm text-blue-700">Assigned</div>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <div className="text-2xl font-bold text-yellow-600">
+                {deliveries.filter(d => d.status === 'in_transit').length}
+              </div>
+              <div className="text-sm text-yellow-700">In Transit</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="text-2xl font-bold text-green-600">
+                {deliveries.filter(d => d.status === 'delivered').length}
+              </div>
+              <div className="text-sm text-green-700">Delivered</div>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="text-2xl font-bold text-red-600">
+                {deliveries.filter(d => d.status === 'failed').length}
+              </div>
+              <div className="text-sm text-red-700">Failed</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {deliveries.length === 0 ? (
         <div className="text-center py-12">
           <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No deliveries found</h3>
-          <p className="text-gray-600">You have no assigned deliveries at the moment.</p>
+          <p className="text-gray-600">
+            {user?.role === 'admin' 
+              ? 'There are no deliveries in the system at the moment.' 
+              : 'You have no assigned deliveries at the moment.'
+            }
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -664,6 +714,12 @@ const Deliveries: React.FC = () => {
                     <MapPin className="w-3 h-3 mr-1" />
                     {delivery.deliveryLocation}
                   </p>
+                  {user?.role === 'admin' && (
+                    <p className="text-sm text-gray-600 flex items-center">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      Area: {delivery.deliveryArea}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -678,6 +734,17 @@ const Deliveries: React.FC = () => {
                       </p>
                     ))}
                   </div>
+                  {user?.role === 'admin' && (
+                    <div className="mt-2">
+                      <h5 className="font-medium text-gray-900 mb-1 flex items-center">
+                        <Truck className="w-4 h-4 mr-2" />
+                        Company Details
+                      </h5>
+                      <p className="text-sm text-gray-600">
+                        {delivery.companyId.companyInfo?.companyName || 'N/A'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -693,46 +760,50 @@ const Deliveries: React.FC = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  {canPickUp(delivery) && (
-                    <button
-                      onClick={() => updateDeliveryStatus(delivery._id, 'picked_up')}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                    >
-                      Mark Picked Up
-                    </button>
-                  )}
-
-                  {canMarkInTransit(delivery) && (
-                    <button
-                      onClick={() => updateDeliveryStatus(delivery._id, 'in_transit')}
-                      className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700"
-                    >
-                      In Transit
-                    </button>
-                  )}
-
-                  {canComplete(delivery) && (
+                  {user?.role === 'delivery_worker' && (
                     <>
-                      <button
-                        onClick={() => {
-                          setSelectedDelivery(delivery);
-                          setShowCompletionModal(true);
-                        }}
-                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center"
-                      >
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Complete
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedDelivery(delivery);
-                          setShowIssueModal(true);
-                        }}
-                        className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center"
-                      >
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        Report Issue
-                      </button>
+                      {canPickUp(delivery) && (
+                        <button
+                          onClick={() => updateDeliveryStatus(delivery._id, 'picked_up')}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                        >
+                          Mark Picked Up
+                        </button>
+                      )}
+
+                      {canMarkInTransit(delivery) && (
+                        <button
+                          onClick={() => updateDeliveryStatus(delivery._id, 'in_transit')}
+                          className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700"
+                        >
+                          In Transit
+                        </button>
+                      )}
+
+                      {canComplete(delivery) && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedDelivery(delivery);
+                              setShowCompletionModal(true);
+                            }}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Complete
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedDelivery(delivery);
+                              setShowIssueModal(true);
+                            }}
+                            className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 flex items-center"
+                          >
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Report Issue
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
 

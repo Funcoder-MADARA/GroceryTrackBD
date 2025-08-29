@@ -16,12 +16,15 @@ import CreateOrder from './pages/orders/CreateOrder';
 import OrderHistory from './pages/orders/OrderHistory';
 import Products from './pages/products/Products';
 import ProductDetails from './pages/products/ProductDetails';
+import ShopkeeperCatalog from './pages/products/ShopkeeperCatalog';
+import CompanyProductManagement from './pages/products/CompanyProductManagement';
 import Deliveries from './pages/delivery/Deliveries';
 import DeliveryDetails from './pages/delivery/DeliveryDetails';
 import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
 import Flags from './pages/Flags';
 import Users from './pages/admin/Users';
+import Homepage from './pages/Homepage';
 
 const AppRoutes: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -37,6 +40,8 @@ const AppRoutes: React.FC = () => {
   return (
    <Routes>
   {/* Public routes */}
+  <Route path="/" element={<Navigate to="/welcome" />} />
+  <Route path="/welcome" element={<Homepage />} />
   <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
   <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
   <Route path="/pending-approval" element={<PendingApproval />} />

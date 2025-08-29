@@ -232,14 +232,22 @@ const validateProfileUpdate = [
   handleValidationErrors
 ];
 
-// Validation rules for MongoDB ObjectId parameters
-const validateObjectId = [
-  param('id')
-    .isMongoId()
-    .withMessage('Invalid ID format'),
-  
-  handleValidationErrors
-];
+// Validation for MongoDB ObjectId present in any route param (id, userId, deliveryId, etc.)
+const validateObjectId = (req, res, next) => {
+  const params = req.params || {};
+  const keys = Object.keys(params);
+  if (keys.length === 0) return next();
+
+  const isValid = keys.some((k) => typeof params[k] === 'string' && /^[a-fA-F0-9]{24}$/.test(params[k]));
+  if (!isValid) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      message: 'Please check your input data',
+      details: [{ msg: 'Invalid ID format', param: keys[0] || 'id' }]
+    });
+  }
+  next();
+};
 
 // Validation rules for pagination
 const validatePagination = [

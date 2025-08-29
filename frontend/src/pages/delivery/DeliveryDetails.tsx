@@ -23,6 +23,14 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+const formatCurrency = (amount: number) => {
+  try {
+    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 0 }).format(amount || 0);
+  } catch {
+    return `BDT ${amount ?? 0}`;
+  }
+};
+
 interface Product {
   _id: string;
   name: string;
@@ -532,15 +540,15 @@ const DeliveryDetails: React.FC = () => {
                               <div className="space-y-1">
                                 <div className="flex items-center text-sm">
                                   <User className="w-4 h-4 text-gray-400 mr-2" />
-                                  <span className="font-medium">{delivery.customer.name}</span>
+                                  <span className="font-medium">{delivery.customer?.name || 'N/A'}</span>
                                 </div>
                                 <div className="flex items-center text-sm text-gray-600">
                                   <Phone className="w-4 h-4 text-gray-400 mr-2" />
-                                  <span>{delivery.customer.phone}</span>
+                                  <span>{delivery.customer?.phone || 'N/A'}</span>
                                 </div>
                                 <div className="flex items-center text-sm text-gray-600">
                                   <Building className="w-4 h-4 text-gray-400 mr-2" />
-                                  <span>{delivery.company.name}</span>
+                                  <span>{delivery.company?.name || 'N/A'}</span>
                                 </div>
                               </div>
                             </div>
@@ -549,10 +557,10 @@ const DeliveryDetails: React.FC = () => {
                             <div className="space-y-2">
                               <h4 className="text-sm font-medium text-gray-900">Products</h4>
                               <div className="space-y-1 max-h-20 overflow-y-auto">
-                                {delivery.products.map((product, index) => (
+                                {(delivery.products || []).map((product, index) => (
                                   <div key={index} className="text-sm text-gray-600">
                                     <Package className="w-4 h-4 inline text-gray-400 mr-2" />
-                                    {product.name} - {product.quantity} {product.unit}
+                                    {(product?.name || 'Product')} - {product?.quantity ?? 0} {product?.unit || ''}
                                   </div>
                                 ))}
                               </div>
@@ -564,11 +572,11 @@ const DeliveryDetails: React.FC = () => {
                               <div className="space-y-1">
                                 <div className="text-sm">
                                   <span className="text-gray-500">From:</span>
-                                  <p className="text-gray-700 text-xs">{delivery.addresses.pickup}</p>
+                                  <p className="text-gray-700 text-xs">{delivery.addresses?.pickup || 'N/A'}</p>
                                 </div>
                                 <div className="text-sm">
                                   <span className="text-gray-500">To:</span>
-                                  <p className="text-gray-700 text-xs">{delivery.addresses.delivery}</p>
+                                  <p className="text-gray-700 text-xs">{delivery.addresses?.delivery || 'N/A'}</p>
                                 </div>
                                 {delivery.route && (
                                   <div className="text-sm">
@@ -585,39 +593,39 @@ const DeliveryDetails: React.FC = () => {
                             <div className="flex items-center space-x-3">
                               <Truck className="w-5 h-5 text-gray-400" />
                               <div>
-                                <p className="text-sm font-medium text-gray-900">{delivery.deliveryWorker.name}</p>
+                                <p className="text-sm font-medium text-gray-900">{delivery.deliveryWorker?.name || 'N/A'}</p>
                                 <p className="text-xs text-gray-600">
-                                  {delivery.deliveryWorker.vehicleType} - {delivery.deliveryWorker.vehicleNumber}
+                                  {(delivery.deliveryWorker?.vehicleType || 'Vehicle')} - {(delivery.deliveryWorker?.vehicleNumber || 'N/A')}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
                               <DollarSign className="w-5 h-5 text-gray-400" />
                               <div>
-                                <p className="text-sm font-medium text-gray-900">৳{delivery.amountToCollect}</p>
-                                <p className="text-xs text-gray-600 capitalize">{delivery.paymentMethod.replace('_', ' ')}</p>
+                                <p className="text-sm font-medium text-gray-900">{formatCurrency(Number(delivery.amountToCollect || 0))}</p>
+                                <p className="text-xs text-gray-600 capitalize">{(delivery.paymentMethod || '').replace('_', ' ') || 'N/A'}</p>
                               </div>
                             </div>
                           </div>
 
                           {/* Issues (if any) */}
-                          {delivery.issues.length > 0 && (
+                          {(delivery.issues?.length || 0) > 0 && (
                             <div className="mt-3 pt-3 border-t border-gray-100">
                               <div className="flex items-center space-x-2 mb-2">
                                 <AlertTriangle className="w-4 h-4 text-red-500" />
                                 <span className="text-sm font-medium text-red-700">
-                                  {delivery.issues.length} Issue(s) Reported
+                                  {delivery.issues?.length} Issue(s) Reported
                                 </span>
                               </div>
                               <div className="space-y-1">
-                                {delivery.issues.slice(0, 2).map((issue, index) => (
+                                {delivery.issues?.slice(0, 2).map((issue, index) => (
                                   <p key={index} className="text-xs text-red-600 bg-red-50 p-2 rounded">
                                     {issue.type}: {issue.description}
                                   </p>
                                 ))}
-                                {delivery.issues.length > 2 && (
+                                {(delivery.issues?.length || 0) > 2 && (
                                   <p className="text-xs text-gray-500">
-                                    +{delivery.issues.length - 2} more issues
+                                    +{(delivery.issues?.length || 0) - 2} more issues
                                   </p>
                                 )}
                               </div>

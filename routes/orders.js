@@ -20,6 +20,10 @@ router.get('/', authenticateToken, getOrders);
 // Fetch order history with enhanced pagination and filters
 router.get('/history', authenticateToken, getOrders);
 
+// New: fetch orders for all roles (alias to history with role-based filtering)
+// Returns the same structure as /history. Useful for explicit API consumers.
+router.get('/all', authenticateToken, getOrders);
+
 // Create new order (shopkeepers only)
 router.post('/', authenticateToken, createOrder);
 

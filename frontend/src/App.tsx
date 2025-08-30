@@ -14,6 +14,7 @@ import Orders from './pages/orders/Orders';
 import OrderDetails from './pages/orders/OrderDetails';
 import CreateOrder from './pages/orders/CreateOrder';
 import OrderHistory from './pages/orders/OrderHistory';
+import OrderHistorySimple from './pages/OrderHistory';
 import Products from './pages/products/Products';
 import ProductDetails from './pages/products/ProductDetails';
 import ShopkeeperCatalog from './pages/products/ShopkeeperCatalog';
@@ -53,6 +54,8 @@ const AppRoutes: React.FC = () => {
     <Route path="/orders" element={<Orders />} />
     <Route path="/orders/create" element={<CreateOrder />} />
     <Route path="/orders/history" element={<OrderHistory />} />
+    {/* Simple JS version for quick access */}
+    <Route path="/orders/history-simple" element={<OrderHistorySimple />} />
     <Route path="/orders/:orderNumber" element={<OrderDetails />} />
     <Route path="/products" element={<Products />} />
     <Route path="/products/catalog" element={<ShopkeeperCatalog />} />

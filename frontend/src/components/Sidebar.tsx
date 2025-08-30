@@ -17,7 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
     { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['shopkeeper', 'company_rep', 'admin'] },
-    { name: 'Order History', href: '/orders/history', icon: Clock, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
+    { name: 'Order History', href: '/orders/history-simple', icon: Clock, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
     { name: 'Flags', href: '/flags', icon: Flag, roles: ['shopkeeper'] },
     { name: 'Products', href: '/products', icon: Package, roles: ['company_rep', 'admin'] },
     { name: 'Deliveries', href: '/deliveries', icon: Truck, roles: ['delivery_worker', 'company_rep', 'admin'] },

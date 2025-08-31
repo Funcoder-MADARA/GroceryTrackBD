@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePendingUsers } from '../hooks/usePendingUsers';
 import { X, User, Home, Package, Truck, BarChart3, Bell, Users, ShoppingCart, Flag, MapPin, Clock } from 'lucide-react';
+import logo from '../assets/logo.svg';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,8 +19,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
     { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['shopkeeper', 'company_rep', 'admin'] },
     { name: 'Order History', href: '/orders/history-simple', icon: Clock, roles: ['shopkeeper', 'company_rep', 'delivery_worker', 'admin'] },
+    { name: 'Product Catalogue', href: '/products/catalogue', icon: Package, roles: ['shopkeeper'] },
     { name: 'Flags', href: '/flags', icon: Flag, roles: ['shopkeeper'] },
-    { name: 'Products', href: '/products', icon: Package, roles: ['company_rep', 'admin'] },
+    { name: 'Products', href: '/products/company', icon: Package, roles: ['company_rep', 'admin'] },
     { name: 'Deliveries', href: '/deliveries', icon: Truck, roles: ['delivery_worker', 'company_rep', 'admin'] },
     { name: 'Delivery Details', href: '/deliveries/details', icon: MapPin, roles: ['delivery_worker', 'company_rep', 'admin'] },
     { name: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['shopkeeper', 'company_rep', 'admin'] },
@@ -45,7 +47,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       >
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">GroceryTrackBD</h2>
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="GroceryTrackBD logo" className="h-6 w-6" />
+            <h2 className="text-lg font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">GroceryTrackBD</h2>
+          </div>
           <button onClick={onClose} className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
             <X className="h-6 w-6" />
           </button>

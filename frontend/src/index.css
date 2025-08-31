@@ -22,7 +22,7 @@
   }
   
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-gradient-to-r from-emerald-600 to-blue-600 text-white hover:from-emerald-700 hover:to-blue-700 focus:ring-primary-500;
   }
   
   .btn-secondary {
@@ -60,7 +60,7 @@
 
   /* Cards */
   .card {
-    @apply bg-white overflow-hidden shadow rounded-lg;
+    @apply bg-white overflow-hidden shadow-xl rounded-2xl border border-gray-100;
   }
   
   .card-header {

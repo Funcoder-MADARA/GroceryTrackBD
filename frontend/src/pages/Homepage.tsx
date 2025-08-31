@@ -18,6 +18,7 @@ import {
   Heart,
   Award
 } from 'lucide-react';
+import logo from '../assets/logo.svg';
 
 interface FeatureCardProps {
   icon: React.ReactNode; 
@@ -176,8 +177,11 @@ const Homepage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <div className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-              GroceryTrackBD
+              <div className="flex items-center gap-3">
+                <img src={logo} alt="GroceryTrackBD logo" className="h-8 w-8" />
+                <div className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                  GroceryTrackBD
+                </div>
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-8">

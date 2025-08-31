@@ -18,6 +18,7 @@ import OrderHistorySimple from './pages/OrderHistory';
 import Products from './pages/products/Products';
 import ProductDetails from './pages/products/ProductDetails';
 import ShopkeeperCatalog from './pages/products/ShopkeeperCatalog';
+import ShopkeeperOrderedCatalogue from './pages/products/ShopkeeperOrderedCatalogue';
 import CompanyProductManagement from './pages/products/CompanyProductManagement';
 import Deliveries from './pages/delivery/Deliveries';
 import DeliveryDetails from './pages/delivery/DeliveryDetails';
@@ -59,6 +60,7 @@ const AppRoutes: React.FC = () => {
     <Route path="/orders/:orderNumber" element={<OrderDetails />} />
     <Route path="/products" element={<Products />} />
     <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
+    <Route path="/products/catalogue" element={<ShopkeeperOrderedCatalogue />} />
     <Route path="/products/company" element={<CompanyProductManagement />} />
     <Route path="/products/:productId" element={<ProductDetails />} />
     <Route path="/deliveries" element={<Deliveries />} />

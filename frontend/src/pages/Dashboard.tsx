@@ -155,17 +155,17 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-2xl shadow-xl p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold">
               {getWelcomeMessage()}
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-emerald-100 mt-1">
               Welcome to your {getRoleDisplayName().toLowerCase()} dashboard
             </p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <div className="flex items-center space-x-2 text-sm text-emerald-100">
             <MapPin className="h-4 w-4" />
             <span>{user?.area}, {user?.city}</span>
           </div>
@@ -176,7 +176,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {user?.role === 'shopkeeper' && shopkeeperStats && (
           <>
-            <div className="bg-white shadow rounded-lg p-6">
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <ShoppingCart className="h-8 w-8 text-primary-600" />
@@ -190,7 +190,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white shadow rounded-lg p-6">
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <TrendingUp className="h-8 w-8 text-success-600" />

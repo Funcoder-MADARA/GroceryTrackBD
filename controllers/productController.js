@@ -119,12 +119,12 @@ exports.getProductsByCompany = async (req, res) => {
   }
 };
 
-// Create new product (company reps only)
+// Create new product (company reps and admins)
 exports.createProduct = async (req, res) => {
   try {
-    // Only company reps can create products
-    if (req.user.role !== 'company_rep') {
-      return res.status(403).json({ error: 'Only company representatives can create products' });
+    // Company reps can create for themselves; admins can create for any company (must provide companyId)
+    if (!['company_rep', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Only company representatives or admins can create products' });
     }
 
     const {
@@ -167,7 +167,7 @@ exports.createProduct = async (req, res) => {
       stockQuantity: Number(stockQuantity) || 0,
       minOrderQuantity: Number(minOrderQuantity) || 1,
       maxOrderQuantity: maxOrderQuantity ? Number(maxOrderQuantity) : null,
-      companyId: req.user._id,
+      companyId: req.user.role === 'company_rep' ? req.user._id : (req.body.companyId || null),
       images: images || [],
       tags: tags || [],
       nutritionInfo,
@@ -176,6 +176,10 @@ exports.createProduct = async (req, res) => {
       brand,
       barcode
     });
+
+    if (!product.companyId) {
+      return res.status(400).json({ error: 'companyId is required when creating products as admin' });
+    }
 
     await product.save();
 
@@ -194,7 +198,7 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Update product (company reps only)
+// Update product (company reps and admins)
 exports.updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -204,8 +208,10 @@ exports.updateProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Check permissions
-    if (req.user.role !== 'company_rep' || product.companyId.toString() !== req.user._id.toString()) {
+    // Check permissions: company rep who owns it, or admin
+    const isOwnerRep = req.user.role === 'company_rep' && product.companyId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwnerRep && !isAdmin) {
       return res.status(403).json({ error: 'Not authorized to update this product' });
     }
 
@@ -253,7 +259,7 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Delete product (company reps only)
+// Delete product (company reps and admins)
 exports.deleteProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -263,8 +269,10 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Check permissions
-    if (req.user.role !== 'company_rep' || product.companyId.toString() !== req.user._id.toString()) {
+    // Check permissions: company rep owner or admin
+    const isOwnerRep = req.user.role === 'company_rep' && product.companyId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwnerRep && !isAdmin) {
       return res.status(403).json({ error: 'Not authorized to delete this product' });
     }
 
@@ -297,7 +305,7 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-// Update stock quantity
+// Update stock quantity (company reps and admins)
 exports.updateStock = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -308,8 +316,10 @@ exports.updateStock = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Check permissions
-    if (req.user.role !== 'company_rep' || product.companyId.toString() !== req.user._id.toString()) {
+    // Check permissions: company rep owner or admin
+    const isOwnerRep = req.user.role === 'company_rep' && product.companyId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwnerRep && !isAdmin) {
       return res.status(403).json({ error: 'Not authorized to update this product' });
     }
 

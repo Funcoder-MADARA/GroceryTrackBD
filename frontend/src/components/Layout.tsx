@@ -17,7 +17,7 @@ const Layout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div

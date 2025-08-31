@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Menu, Bell, User, LogOut, Settings } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { notificationsAPI } from '../services/api';
+import logo from '../assets/logo.svg';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -66,10 +67,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <Menu className="h-6 w-6" />
           </button>
           
-          <div className="ml-4 lg:ml-0">
-            <h1 className="text-xl font-semibold text-gray-900">
-              GroceryTrackBD
-            </h1>
+          <div className="ml-4 lg:ml-0 flex items-center gap-2">
+            <img src={logo} alt="GroceryTrackBD logo" className="h-7 w-7" />
+            <h1 className="text-xl font-semibold text-gray-900">GroceryTrackBD</h1>
           </div>
         </div>
 

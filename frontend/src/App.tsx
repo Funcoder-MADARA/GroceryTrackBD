@@ -14,9 +14,11 @@ import Orders from './pages/orders/Orders';
 import OrderDetails from './pages/orders/OrderDetails';
 import CreateOrder from './pages/orders/CreateOrder';
 import OrderHistory from './pages/orders/OrderHistory';
+import OrderHistorySimple from './pages/OrderHistory';
 import Products from './pages/products/Products';
 import ProductDetails from './pages/products/ProductDetails';
 import ShopkeeperCatalog from './pages/products/ShopkeeperCatalog';
+import ShopkeeperOrderedCatalogue from './pages/products/ShopkeeperOrderedCatalogue';
 import CompanyProductManagement from './pages/products/CompanyProductManagement';
 import Deliveries from './pages/delivery/Deliveries';
 import DeliveryDetails from './pages/delivery/DeliveryDetails';
@@ -53,13 +55,31 @@ const AppRoutes: React.FC = () => {
     <Route path="/orders" element={<Orders />} />
     <Route path="/orders/create" element={<CreateOrder />} />
     <Route path="/orders/history" element={<OrderHistory />} />
+    {/* Simple JS version for quick access */}
+    <Route path="/orders/history-simple" element={<OrderHistorySimple />} />
     <Route path="/orders/:orderNumber" element={<OrderDetails />} />
     <Route path="/products" element={<Products />} />
     <Route path="/products/catalog" element={<ShopkeeperCatalog />} />
+    <Route path="/products/catalogue" element={<ShopkeeperOrderedCatalogue />} />
     <Route path="/products/company" element={<CompanyProductManagement />} />
     <Route path="/products/:productId" element={<ProductDetails />} />
     <Route path="/deliveries" element={<Deliveries />} />
-    <Route path="/deliveries/:deliveryId" element={<DeliveryDetails />} />
+    <Route
+      path="/deliveries/details"
+      element={
+        <ProtectedRoute allowedRoles={['admin','company_rep','delivery_worker']}>
+          <DeliveryDetails />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/deliveries/:deliveryId"
+      element={
+        <ProtectedRoute allowedRoles={['admin','company_rep','delivery_worker']}>
+          <DeliveryDetails />
+        </ProtectedRoute>
+      }
+    />
     <Route path="/analytics" element={<Analytics />} />
     <Route path="/notifications" element={<Notifications />} />
     <Route path="/flags" element={<Flags />} />

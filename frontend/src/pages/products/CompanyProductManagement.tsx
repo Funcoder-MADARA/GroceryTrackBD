@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Package, Search, Filter, MoreVertical, Eye, TrendingUp, AlertTriangle } from 'lucide-react';
-import { productsAPI } from '../../services/api';
+import { Plus, Edit, Trash2, Package, Search, TrendingUp, AlertTriangle } from 'lucide-react';
+import { productsAPI, profileAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import EmptyState from '../../components/EmptyState';
@@ -42,6 +42,8 @@ const CompanyProductManagement: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [categories, setCategories] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<{_id:string; companyInfo?: { companyName: string }}[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>({
@@ -56,22 +58,36 @@ const CompanyProductManagement: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user?._id) {
-      loadProducts();
-    }
-  }, [user]);
+    (async () => {
+      try {
+        const catRes = await productsAPI.getCategories();
+        setCategories(catRes.data.categories || []);
+      } catch {}
+      if (user?.role === 'admin') {
+        const res = await profileAPI.getUsersByRole('company_rep');
+        setCompanies(res.data.users || []);
+      }
+      if (user?._id) {
+        await loadProducts();
+      }
+    })();
+    // eslint-disable-next-line
+  }, [user, selectedCompanyId]);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await productsAPI.getProductsByCompany(user!._id);
+      const companyId = user?.role === 'admin' ? (selectedCompanyId || '') : (user!._id);
+      const response = companyId
+        ? await productsAPI.getProductsByCompany(companyId)
+        : await productsAPI.getProducts();
       const productsData = response.data.products || [];
       setProducts(productsData);
 
       // Extract unique categories
       const categorySet = new Set(productsData.map((p: Product) => p.category).filter(Boolean) as string[]);
       const uniqueCategories = Array.from(categorySet) as string[];
-      setCategories(uniqueCategories);
+      if (!categories.length) setCategories(prev => prev.length ? prev : uniqueCategories);
 
     } catch (error) {
       console.error('Failed to load products:', error);
@@ -89,7 +105,15 @@ const CompanyProductManagement: React.FC = () => {
         await productsAPI.updateProduct(editingProduct._id, formData);
         toast.success('Product updated successfully');
       } else {
-        await productsAPI.createProduct(formData);
+        const payload: any = { ...formData };
+        if (user?.role === 'admin') {
+          if (!selectedCompanyId) {
+            toast.error('Please select a company');
+            return;
+          }
+          payload.companyId = selectedCompanyId;
+        }
+        await productsAPI.createProduct(payload);
         toast.success('Product created successfully');
       }
       
@@ -212,6 +236,23 @@ const CompanyProductManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Admin: choose company to manage */}
+      {user?.role === 'admin' && (
+        <div className="bg-white p-4 rounded-2xl shadow-xl border border-gray-100">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Select Company</label>
+          <select
+            value={selectedCompanyId}
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">All Companies</option>
+            {companies.map(c => (
+              <option key={c._id} value={c._id}>{c?.companyInfo?.companyName || 'Company'}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -278,13 +319,17 @@ const CompanyProductManagement: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <input
-                type="text"
+              <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 required
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
+              >
+                <option value="">Select category</option>
+                {categories.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -425,7 +470,7 @@ const CompanyProductManagement: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="bg-white shadow-sm border rounded-lg overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

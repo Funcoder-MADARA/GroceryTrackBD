@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, User, Mail, Phone, MapPin, Building, Store, Truck } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Phone, MapPin, Building, Store, Truck, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -76,8 +76,17 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="inline-flex items-center text-sm text-gray-600 hover:text-emerald-700"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to sign in
+          </button>
+        </div>
         <div className="text-center mb-8">
           <div className="mx-auto h-12 w-12 bg-primary-600 rounded-full flex items-center justify-center">
             <span className="text-white text-xl font-bold">G</span>

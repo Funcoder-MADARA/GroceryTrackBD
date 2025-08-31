@@ -172,6 +172,9 @@ export const deliveriesAPI = {
   
   getAllDeliveries: (params?: any) =>
     api.get('/delivery', { params }),
+  
+  getDeliveryDetailsByArea: (params?: any) =>
+    api.get('/delivery/details-by-area', { params }),
 };
 
 // Analytics API

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GroceryTrackBD Logo">
+  <title>GroceryTrackBD</title>
+  <defs>
+    <linearGradient id="cartStroke" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10B981"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cart only, transparent background -->
+  <g stroke="url(#cartStroke)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Handle path to cart -->
+    <path d="M10 12h4c.9 0 1.7.6 1.9 1.5L19 26h15c.9 0 1.7.6 1.9 1.5L37 33H20"/>
+    <!-- Back to start handle -->
+    <path d="M14 12l-2.2-5H6"/>
+    <!-- Cart basket top edge -->
+    <path d="M18 18h20"/>
+  </g>
+
+  <!-- Wheels -->
+  <circle cx="22" cy="36" r="3" fill="#10B981"/>
+  <circle cx="32" cy="36" r="3" fill="#2563EB"/>
+</svg>
